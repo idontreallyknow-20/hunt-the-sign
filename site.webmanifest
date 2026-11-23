@@ -3,14 +3,14 @@
   "short_name": "Hunt the Sign",
   "description": "A class game for Medicine Walk by Richard Wagamese. Find eight lines from the novel and match each one to its theme, speaker or ILT question.",
   "lang": "en-CA",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/hunt-the-sign/",
+  "scope": "/hunt-the-sign/",
   "display": "standalone",
   "background_color": "#F5F1E8",
   "theme_color": "#1F2A24",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/hunt-the-sign/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
