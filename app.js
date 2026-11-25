@@ -49,13 +49,13 @@ const QUESTIONS = [
     ev: [['Weren’t no good old days. But you need to hear still. It’s all I got to give ya.', 23, 'Eldon to Frank']],
     why: 'Eldon has nothing easy to hand down. He chooses the truth of his life over a comfortable silence, and that story is his gift.' },
 
-  { type: 'order', art: 'fire', ilt: 'human', theme: 'pain', secs: 35,
+  { type: 'order', art: 'lake', ilt: 'human', theme: 'pain', secs: 35,
     prompt: 'Frank’s verdict on running away. Put his words in order.',
     tiles: ['Gettin’ half killed once’s', 'gotta be better’n', 'bein’ half alive', 'forever.'], join: ' ',
     ev: [['Gettin’ half killed once’s gotta be better’n bein’ half alive forever.', 102, 'Frank to Eldon']],
     why: 'A beating ends. A life spent hiding from shame never fully starts. Frank names the real cost of flight.' },
 
-  { type: 'mc', art: 'farm', ilt: 'relatives', theme: 'pain',
+  { type: 'mc', art: 'cabin', ilt: 'relatives', theme: 'pain',
     prompt: 'Eldon walked away from his mother and never went back. What does he say kept him gone?',
     opts: ['He stopped caring about her', 'Guilt and shame he could not face', 'He never learned where she lived', 'Jimmy talked him out of it'], answer: 1,
     ev: [['Love an’ shame never mix', 100, 'Eldon']],
@@ -92,7 +92,7 @@ const QUESTIONS = [
     ev: [['When you share stories you change things.', 203, 'Angie to Eldon']],
     why: 'Silence is how Eldon keeps running. Angie offers the other choice: say the hard thing and let it change you.' },
 
-  { type: 'stand', art: 'ridge', ilt: 'ancestors', theme: 'truth',
+  { type: 'stand', art: 'grave', ilt: 'ancestors', theme: 'truth',
     prompt: 'Eldon ran for most of his life, then told the truth at the end. Does a late truth count?',
     opts: ['Yes. Late is still told', 'Partly. It frees Frank more than Eldon', 'No. The damage is already done'],
     lead: 'Frank’s answer, at his father’s grave:',
@@ -164,43 +164,80 @@ function applySet(first) {
   if (s.contrast) r.setAttribute('data-contrast', 'high'); else r.removeAttribute('data-contrast');
   r.classList.toggle('large', !!s.large); r.classList.toggle('calm', !!s.calm);
 }
-/* ---------- illustrations: line drawings, one weight, drawn here ---------- */
-const PIECE = {
-  spruce: (x, y, h) => { const w = h * .3; let d = `M${x} ${y}V${y - h}`; for (let i = 1; i <= 4; i++) { const yy = y - h + h * .2 * i + h * .08, ww = w * i / 4; d += `M${x - ww} ${yy}L${x} ${yy - h * .2}L${x + ww} ${yy}`; } return `<path d="${d}"/>`; },
-  bear: '<path class="fl bear" d="M72 118 74 98Q68 84 80 74 98 62 118 66 130 52 146 58 155 62 160 68L163 62Q167 59 169 66 180 70 187 80L193 84Q195 89 190 91L178 93Q170 95 166 92 161 100 158 102V118H144L145 104 138 106 136 118H124L126 103Q112 106 104 102V118H92V104L90 118Z"/>',
-  fire: '<path d="M92 122 148 106M92 106 148 122"/><path class="fa flame" d="M120 106Q102 88 117 64 120 80 127 72 142 90 120 106Z"/><path class="dash smoke" d="M121 56Q112 44 122 34 131 24 122 12"/>',
-  cabin: '<path d="M64 116V84L96 64 128 84V116ZM58 88 96 64 134 88M88 116V98H102V116M110 70V56H118V75M112 92H122V101H112Z"/><path class="dash smoke" d="M114 50Q108 42 115 34"/>',
-  fence: '<path d="M140 116V98M160 116V98M180 116V98M200 116V98M220 116V98M134 103H226M134 110H226"/>',
-  cairn: (x, y) => `<path d="M${x - 11} ${y}h22v-7h-22zM${x - 8} ${y - 7}h16v-6h-16zM${x - 5} ${y - 13}h10v-5h-10z"/>`,
-  moon: (x, y, r) => `<circle class="ac" cx="${x}" cy="${y}" r="${r}"/>`,
-  star: (x, y, s = 3, i = 0) => `<path class="star" style="--d:${(i * .9 % 3.2).toFixed(1)}s" d="M${x - s} ${y}h${2 * s}M${x} ${y - s}v${2 * s}"/>`
+/* ---------- scenes: layered silhouettes in the palette, built here, no image files ---------- */
+const rng = seed => () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const SH = 300;
+let uid = 0;
+function ridge(seed, W, base, amp, gap) {
+  const r = rng(seed); let x = -140, y = base, d = `M-140 ${SH + 60}L-140 ${base}`, up = true;
+  while (x < W + 140) { const nx = x + gap * (.55 + r() * .9), ny = up ? base - amp * (.4 + r() * .6) : base - amp * r() * .22, mx = x + (nx - x) * (.35 + r() * .3), my = y + (ny - y) * .5 + (r() - .5) * amp * .16;
+    d += `L${mx.toFixed(0)} ${my.toFixed(0)}L${nx.toFixed(0)} ${ny.toFixed(0)}`; x = nx; y = ny; up = !up; }
+  return `${d}L${W + 140} ${SH + 60}Z`;
+}
+const hillPath = pts => `M${pts[0][0]} ${SH + 60}` + pts.map(p => `L${p[0]} ${p[1]}`).join('') + `L${pts[pts.length - 1][0]} ${SH + 60}Z`;
+const yAt = (pts, x) => { for (let i = 1; i < pts.length; i++) if (x <= pts[i][0]) { const a = pts[i - 1], b = pts[i]; return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); } return pts[pts.length - 1][1]; };
+const spruce = (x, y, h) => { const w = h * .24, f = n => n.toFixed(1); return `M${f(x - w)} ${f(y)}L${f(x)} ${f(y - h * .56)}L${f(x + w)} ${f(y)}ZM${f(x - w * .78)} ${f(y - h * .3)}L${f(x)} ${f(y - h * .82)}L${f(x + w * .78)} ${f(y - h * .3)}ZM${f(x - w * .52)} ${f(y - h * .6)}L${f(x)} ${f(y - h)}L${f(x + w * .52)} ${f(y - h * .6)}Z`; };
+function forest(seed, ranges, fy, gap, h0, h1) { const r = rng(seed); let d = ''; ranges.forEach(([a, b]) => { for (let x = a; x < b; x += gap * (.5 + r())) d += spruce(x, fy(x) + 2, h0 + r() * (h1 - h0)); }); return d; }
+const BEAR = 'M72 118 74 98Q68 84 80 74 98 62 118 66 130 52 146 58 155 62 160 68L163 62Q167 59 169 66 180 70 187 80L193 84Q195 89 190 91L178 93Q170 95 166 92 161 100 158 102V118H144L145 104 138 106 136 118H124L126 103Q112 106 104 102V118H92V104L90 118Z';
+const P = {
+  cabin: (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><polygon class="spill" points="-8,0 28,0 66,30 -46,30"/><rect class="d0" x="17" y="-66" width="9" height="24"/><rect class="d1" x="-34" y="-34" width="68" height="34"/><polygon class="d0" points="-43,-33 0,-62 43,-33"/><path class="rim" d="M-43-33L0-62"/><rect class="halo" x="-31" y="-29" width="24" height="23"/><rect class="halo" x="7" y="-29" width="24" height="23"/><rect class="win" x="-26" y="-24" width="14" height="13"/><rect class="win" x="12" y="-24" width="14" height="13"/><path class="mull" d="M-19-24v13M19-24v13M-26-17.5h14M12-17.5h14"/><rect class="d0" x="-5" y="-21" width="10" height="21"/>${[0, 1.4, 2.8].map(d => `<circle class="puff" style="--d:${d}s" cx="21" cy="-70" r="4"/>`).join('')}</g>`,
+  barn: (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><rect class="d1" x="-46" y="-40" width="92" height="40"/><polygon class="d0" points="-51,-40 -35,-62 0,-74 35,-62 51,-40"/><path class="rim" d="M-51-40L-35-62L0-74"/><rect class="d0" x="-14" y="-28" width="28" height="28"/><path class="rim" d="M-14-28L14 0M14-28L-14 0"/><rect class="halo" x="-11" y="-63" width="22" height="19"/><rect class="win" x="-6" y="-58" width="12" height="10"/></g>`,
+  fence: (x0, x1, fy) => { let d = '', a = '', b = ''; for (let x = x0; x <= x1; x += 22) { const y = fy(x); d += `M${x} ${y + 2}v-16`; a += `${a ? 'L' : 'M'}${x} ${y - 5}`; b += `${b ? 'L' : 'M'}${x} ${y - 11}`; } return `<path class="fence" d="${d}${a}${b}"/>`; },
+  fire: (x, y, s, id, people) => { const r = rng(x + 3); return `<g transform="translate(${x} ${y}) scale(${s})"><g class="firew"><circle class="glow" cy="-14" r="96" fill="url(#${id}f)"/>${people ? '<g class="d0"><circle cx="-56" cy="-27" r="6"/><path d="M-67 0L-62-20L-50-20L-43 0Z"/><circle cx="62" cy="-21" r="6"/><path d="M49 0L55-14L72-14L83 0Z"/></g>' : ''}<path class="log" d="M-17 0L17-7M-17-7L17 0"/><path class="flame f1" d="M0-3Q-16-17-3-42 0-27 7-33 18-15 0-3Z"/><path class="flame f2" d="M0-4Q-8-13-1-27 2-19 5-21 10-11 0-4Z"/>${[...Array(7)].map((_, i) => `<rect class="ember" style="--d:${(i * .5).toFixed(1)}s;--x:${(r() * 36 - 18).toFixed(0)}px" x="${(r() * 16 - 8).toFixed(0)}" y="-34" width="2.6" height="2.6"/>`).join('')}</g></g>`; },
+  fireDef: id => `<defs><radialGradient id="${id}f"><stop offset="0" stop-color="#EDB05A" stop-opacity=".62"/><stop offset=".45" stop-color="#C9822B" stop-opacity=".2"/><stop offset="1" stop-color="#C9822B" stop-opacity="0"/></radialGradient></defs>`,
+  bear: (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s}) translate(-130 -118)"><path class="rimf" transform="translate(-1.6 -1.8)" d="${BEAR}"/><path class="d0" d="${BEAR}"/></g>`,
+  cairn: (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><polygon class="s1" points="-17,1 -12,-9 7,-10 16,1"/><polygon class="s2" points="-10,-9 -7,-17 7,-17 9,-10"/><polygon class="s1" points="-5,-17 -2,-24 5,-23 6,-17"/></g>`,
+  flies: (n, x0, x1, y0, y1, seed) => { const r = rng(seed); return [...Array(n)].map(() => `<rect class="fly" style="--d:${(r() * 6).toFixed(1)}s;--t:${(5 + r() * 5).toFixed(1)}s" x="${(x0 + r() * (x1 - x0)).toFixed(0)}" y="${(y0 + r() * (y1 - y0)).toFixed(0)}" width="3" height="3"/>`).join(''); }
 };
-PIECE.stars = [[41, 26, 3], [199, 20, 3], [154, 40, 2], [72, 46, 2]].map((a, i) => PIECE.star(...a, i)).join('');
-const ART = {
-  bear: `<path d="M0 118H240M0 96 34 76 60 88M200 92 222 78 240 86M14 130H96M150 130H226"/>${PIECE.spruce(28, 118, 40)}${PIECE.spruce(214, 118, 52)}${PIECE.spruce(46, 118, 26)}${PIECE.bear}${PIECE.moon(206, 30, 12)}`,
-  fire: `<path d="M20 124H220M0 96 52 72 96 88"/>${PIECE.stars}${PIECE.fire}${PIECE.spruce(40, 124, 46)}${PIECE.spruce(198, 124, 58)}${PIECE.spruce(216, 124, 34)}${PIECE.moon(176, 34, 11)}`,
-  farm: `<path d="M0 116H240M0 80 40 62 70 74M150 72 190 54 240 78M20 128H110M130 128H230M40 138H200"/>${PIECE.cabin}${PIECE.fence}${PIECE.spruce(34, 116, 44)}`,
-  ridge: `<path d="M0 112 46 86 84 98 132 54 172 90 204 76 240 100M0 132 70 118 150 126 240 112"/>${PIECE.cairn(132, 54)}${PIECE.moon(190, 32, 14)}${PIECE.spruce(30, 112, 30)}${PIECE.spruce(222, 104, 36)}${PIECE.star(55, 30, 3, 1)}${PIECE.star(98, 22, 2, 2)}${PIECE.star(160, 24, 2, 3)}`,
-  trail: `<path d="M0 124H240M0 70 60 48 104 62 160 30 240 60"/><path class="dash march" d="M18 124Q60 96 96 104T170 78 214 44"/><path class="fa mkr" style="--d:0s" d="M36 104h10v10h-10z"/><path class="fa mkr" style="--d:.5s" d="M90 98h10v10h-10z"/><path class="fa mkr" style="--d:1s" d="M150 78h10v10h-10z"/>${PIECE.cairn(214, 44)}${PIECE.spruce(120, 124, 34)}`
+const HILL = [[-140, 238], [150, 232], [300, 240], [420, 228], [560, 236], [700, 226], [940, 234]];
+const CFG = {
+  hero:  { sky: 'night', far: [11, 160, 125, 150], mid: [23, 206, 80, 105], hill: [[-140, 236], [380, 236], [500, 230], [640, 232], [760, 240], [880, 236], [1080, 224], [1300, 234], [1740, 226]], orb: [760, 96, 20], trees: [[-120, 440], [650, 730], [1130, 1720]] },
+  bear:  { sky: 'night', far: [5, 170, 120, 150], mid: [9, 208, 70, 110], hill: [[-140, 248], [200, 242], [330, 224], [520, 218], [640, 232], [940, 240]], orb: [452, 98, 36], trees: [[-120, 210], [620, 920]] },
+  fire:  { sky: 'night', far: [31, 165, 110, 140], mid: [37, 208, 76, 100], hill: HILL, orb: [610, 56, 20], trees: [[-120, 250], [560, 920]] },
+  lake:  { sky: 'night', far: [41, 160, 120, 160], mid: [43, 206, 60, 120], midY: 214, hill: [[-140, 268], [240, 260], [420, 272], [600, 262], [940, 268]], orb: [520, 64, 26], trees: [[-120, 170], [660, 920]] },
+  trail: { sky: 'night', far: [51, 150, 110, 150], mid: [53, 200, 70, 110], hill: [[-140, 264], [200, 252], [380, 232], [520, 202], [640, 172], [720, 178], [940, 204]], orb: [190, 58, 20], trees: [[-120, 90], [740, 920]] },
+  cabin: { sky: 'dusk', far: [61, 170, 105, 150], mid: [67, 210, 70, 105], hill: HILL, trees: [[-120, 290], [520, 920]] },
+  farm:  { sky: 'dusk', far: [71, 172, 100, 160], mid: [73, 212, 60, 110], hill: [[-140, 236], [200, 232], [620, 232], [760, 228], [940, 232]], trees: [[-120, 190]] },
+  grave: { sky: 'dawn', far: [81, 176, 96, 150], mid: [83, 212, 64, 110], hill: [[-140, 252], [250, 246], [340, 228], [460, 224], [540, 240], [940, 248]], orb: [440, 150, 30], trees: [[-120, 150], [640, 920]] },
+  end:   { sky: 'night', far: [91, 160, 120, 150], mid: [93, 206, 78, 105], hill: HILL, orb: [585, 70, 22], trees: [[-120, 300], [600, 920]] }
 };
-const art = k => `<svg class="art" viewBox="0 0 240 150" aria-hidden="true">${ART[k] || ART.ridge}</svg>`;
-/* The title scene: the farm at one end of the trail, the ridge at the other. */
-const SCENE = (() => {
-  const far = [[-900, 176], [0, 150], [110, 120], [250, 150], [400, 96], [560, 146], [700, 84], [860, 140], [1010, 104], [1180, 60], [1330, 128], [1460, 96], [1600, 140], [2500, 176]];
-  const near = [[-900, 232], [440, 232], [600, 222], [800, 236], [980, 218], [1220, 232], [1420, 214], [1600, 224], [2500, 224]];
-  const line = pts => 'M' + pts.map(p => p.join(' ')).join('L');
-  const sp = [[40, 232, 52], [500, 228, 62], [540, 226, 40], [900, 226, 72], [942, 222, 46], [1090, 224, 34], [1470, 216, 78], [1522, 220, 50], [-120, 232, 70], [1700, 224, 66]].map(a => PIECE.spruce(...a)).join('');
-  return `<svg class="art scene" viewBox="0 0 1600 300" preserveAspectRatio="xMidYMax meet" overflow="visible" aria-hidden="true">
-    <path d="${line(far)}"/><path d="${line(near)}"/>${sp}${PIECE.moon(1345, 46, 24)}${PIECE.cairn(1180, 60)}
-    <g transform="translate(60 58) scale(1.5)">${PIECE.cabin}${PIECE.fence}</g>
-    <mask id="trailmask" maskUnits="userSpaceOnUse" x="-900" y="0" width="3400" height="300"><path class="draw" pathLength="1" d="M206 238Q340 280 520 270T690 264M748 258Q900 250 1010 196T1174 68"/></mask>
-    <path class="dash" mask="url(#trailmask)" d="M206 238Q340 280 520 270T690 264M748 258Q900 250 1010 196T1174 68"/>
-    <g transform="translate(580 122) scale(1.15)">${PIECE.fire}</g>
-    <g class="walk"><g class="bob"><g transform="translate(1212 142) scale(.7)">${PIECE.bear}</g></g></g>
-    <path d="M-900 288H2500M250 274h110M860 278h170M1250 270h190"/>
-    ${[[525, 50, 5], [804, 34, 4], [994, 60, 4], [254, 70, 4], [1504, 40, 4], [94, 56, 4], [660, 30, 3], [1120, 24, 3]].map((a, i) => PIECE.star(...a, i)).join('')}
-  </svg>`;
-})();
+/* mood: 'win' brightens the scene and throws sparks, 'miss' dims it for a moment. */
+function scene(kind, mood = '') {
+  const C = CFG[kind] || CFG.fire, hero = kind === 'hero', W = hero ? 1600 : 800, id = 'g' + (++uid), r = rng(kind.charCodeAt(0) * 31 + kind.length * 7), fy = x => yAt(C.hill, x);
+  const sv = (n, inner) => `<svg class="ly l${n}" viewBox="0 0 ${W} ${SH}" preserveAspectRatio="xMidYMax slice" focusable="false">${inner}</svg>`;
+  let sky = '';
+  const ns = C.sky === 'night' ? (hero ? 80 : 42) : C.sky === 'dusk' ? 14 : 0;
+  for (let i = 0; i < ns; i++) { const s = r() < .2 ? 2.6 : 1.6; sky += `<rect class="st${i % 5 === 0 ? ' tw' : ''}" style="--d:${(r() * 4).toFixed(1)}s" x="${(r() * (W + 200) - 100).toFixed(0)}" y="${(r() * 340 - 180).toFixed(0)}" width="${s}" height="${s}" opacity="${(.4 + r() * .6).toFixed(2)}"/>`; }
+  if (C.orb) { const [x, y, q] = C.orb, sun = C.sky === 'dawn';
+    sky = `<defs><radialGradient id="${id}m"><stop offset="0" stop-color="${sun ? '#FFE9B0' : '#F3E7C9'}" stop-opacity="${sun ? .8 : .5}"/><stop offset="1" stop-color="${sun ? '#F4C777' : '#F3E7C9'}" stop-opacity="0"/></radialGradient></defs>` + sky +
+      `<g class="orb${sun ? ' sunrise' : ''}"><circle class="glow" cx="${x}" cy="${y}" r="${q * (sun ? 5 : 4.2)}" fill="url(#${id}m)"/><circle cx="${x}" cy="${y}" r="${q}" fill="${sun ? '#FFEDBE' : '#F3E9D2'}"/>${sun ? '' : `<circle cx="${x - q * .3}" cy="${y - q * .25}" r="${q * .2}" fill="#DCCFB0"/><circle cx="${x + q * .28}" cy="${y + q * .3}" r="${q * .14}" fill="#DCCFB0"/>`}</g>`; }
+  let p2 = '', p3 = '', p4 = '';
+  if (kind === 'hero') {
+    const tr = 'M585 236Q660 262 760 248M842 242Q930 240 990 214T1130 150';
+    p3 = P.fireDef(id) + `<mask id="${id}t" maskUnits="userSpaceOnUse" x="0" y="0" width="1600" height="320"><path class="draw" pathLength="1" d="${tr}"/></mask><path class="path" mask="url(#${id}t)" d="${tr}"/>` + P.cabin(520, fy(520) + 1, 1.15) + P.fire(800, fy(800) + 2, 1, id, true) + `<g class="walk"><g class="bob">${P.bear(1010, fy(1040) + 1, .62)}</g></g>` + P.flies(12, 520, 1100, 150, 232, 7);
+  } else if (kind === 'bear') {
+    p3 = `<path class="path" d="M60 262Q200 248 330 236"/>` + `<g class="breathe">${P.bear(430, fy(430) + 1, 1.2)}</g>`;
+  } else if (kind === 'fire' || kind === 'end') {
+    const fx = kind === 'end' ? 470 : 400; p3 = P.fireDef(id) + P.fire(fx, fy(fx) + 2, 1.25, id, true) + P.flies(5, 200, 640, 150, 226, 9);
+  } else if (kind === 'lake') {
+    const [mx] = C.orb; p2 = `<defs><linearGradient id="${id}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A5B52"/><stop offset="1" stop-color="#17211C"/></linearGradient></defs><rect x="-140" y="214" width="${W + 280}" height="150" fill="url(#${id}w)"/>` +
+      [...Array(7)].map((_, i) => `<rect class="shim" style="--d:${(i * .35).toFixed(2)}s" x="${mx - 26 + i * 3}" y="${221 + i * 7}" width="${52 - i * 6}" height="2" fill="#F3E9D2"/>`).join('') + '<path class="d0" d="M268 240Q300 252 336 240L329 247H276Z"/>';
+    p3 = P.flies(8, 120, 700, 180, 262, 5);
+  } else if (kind === 'trail') {
+    p3 = `<path class="path" d="M110 262Q250 252 340 240T510 208 632 176"/>` + [[220, 247], [395, 221], [545, 189]].map((m, i) => `<rect class="mkr" style="--d:${i * .5}s" x="${m[0]}" y="${m[1]}" width="10" height="10"/>`).join('') + P.cairn(640, 172, 1.1);
+  } else if (kind === 'cabin') {
+    p3 = P.cabin(400, fy(400) + 3, 1.7);
+  } else if (kind === 'farm') {
+    p3 = P.barn(300, 233, 1.25) + P.cabin(470, 233, .95) + P.fence(540, 760, fy);
+    p4 = `<path class="rows" d="M120 300L330 262M260 300L400 262M400 300L470 262M540 300L540 262M680 300L610 262"/>`;
+  } else if (kind === 'grave') {
+    p3 = `<path class="d0" d="${spruce(318, fy(318) + 2, 70)}"/>` + P.cairn(410, fy(410) + 1, 1.7);
+  }
+  const fg = [[-140, 290], [W * .3, 282], [W * .62, 290], [W + 140, 280]];
+  const side = kind === 'farm' ? '' : `<path class="d0" d="${spruce(hero ? 330 : 70, 292, hero ? 150 : 140)}${spruce(hero ? 1290 : W - 60, 290, hero ? 170 : 160)}${spruce(hero ? 1340 : W - 10, 292, 110)}"/>`;
+  const sparks = mood === 'win' ? `<div class="sparks">${[...Array(14)].map((_, i) => `<i style="--dx:${(Math.cos(i * 2.4) * (40 + i * 7)).toFixed(0)}px;--dy:${(-30 - (i * 37 % 90)).toFixed(0)}px;--d:${(i % 5 * .05).toFixed(2)}s"></i>`).join('')}</div>` : '';
+  return `<div class="scene sk-${C.sky} sc-${kind}${mood ? ' ' + mood : ''}" aria-hidden="true">${hero ? '<div class="sky2"></div>' : ''}${sv(0, sky)}${sv(1, `<path class="m1" d="${ridge(C.far[0], W, C.far[1], C.far[2], C.far[3])}"/>`)}<div class="mist"></div>${sv(2, `<path class="m2" d="${ridge(C.mid[0], W, C.mid[1], C.mid[2], C.mid[3])}"/><path class="m3" d="${forest(C.mid[0] + 1, [[-140, W + 140]], () => C.midY || 238, 13, 12, 28)}"/>${p2}`)}<div class="mist near"></div>${sv(3, `<path class="m3" d="${hillPath(C.hill)}"/><path class="m4" d="${forest(C.far[0] + 2, C.trees, fy, 20, 26, 64)}"/>${p3}`)}${sv(4, `<path class="gd" d="${hillPath(fg)}"/>${side}${p4}`)}<div class="flash"></div>${sparks}</div>`;
+}
 
 /* ---------- room clock (host) ---------- */
 let clock = { left: GAME.minutes * 60, iv: 0, end: 0 };
@@ -256,20 +293,25 @@ function settle(given, timeout) {
   }
   r.score += gain; r.phase = 'fb'; r.cur.last = { ok, gain, speed, m, timeout: !!timeout, given };
   r.log.push({ ok, gain });
-  render('#go'); if (gain) { const hs = $('#hudScore'); countUp(hs, r.score, r.score - gain, 600); if (hs) hs.classList.add('pop'); } if (ok) burst(gain); const fb = $('.fb'); if (fb && innerWidth <= 820) fb.scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' });
+  render('#go'); if (gain) { const hs = $('#hudScore'); countUp(hs, r.score, r.score - gain, 600); if (hs) hs.classList.add('pop'); } if (ok) burst(gain); if (ok && m > mult(r.streak - 1)) banner('Streak ×' + m); const fb = $('.fb'); if (fb && innerWidth <= 820) fb.scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' });
 }
 function nextQuestion() { const r = state.run; if (!r || r.phase !== 'fb') return;
-  const step = () => { if (state.run !== r || state.screen !== 'q') return; if (r.i + 1 >= QUESTIONS.length) { finishRun(); return; } r.i++; beginQuestion(); render(); scrollTo(0, 0); tickBar(); };
-  const pg = $('.q'); if (calm() || !pg) { step(); return; } r.phase = 'out'; pg.classList.add('leave'); setTimeout(step, 190); }
-function finishRun() { const r = state.run; r.phase = 'done'; go('end'); countUp($('#bigScore'), r.score); confetti(); }
+  const step = () => { if (state.run !== r || state.screen !== 'q') return; if (r.i + 1 >= QUESTIONS.length) { finishRun(); return; } const old = calm() ? null : $('.plate .scene'); r.i++; beginQuestion(); render();
+    const pl = $('.plate'); if (old && pl) { old.classList.remove('win', 'miss'); old.classList.add('ghost'); pl.appendChild(old); setTimeout(() => old.remove(), 700); }
+    scrollTo(0, 0); tickBar(); };
+  const pg = $('.q'); if (calm() || !pg) { step(); return; } r.phase = 'out'; pg.classList.add('leave'); setTimeout(step, 230); }
+function finishRun() { const r = state.run; r.phase = 'done'; go('end'); const el = $('#bigScore'); if (calm()) return;
+  el.textContent = '0'; setTimeout(() => { if (el.isConnected) countUp(el, r.score, 0, 1200); }, 900); setTimeout(() => { if (el.isConnected) confetti(); }, 2200); }
 
 /* ---------- views ---------- */
 const V = {};
+/* The title, one span per letter, so the opening can raise them one at a time. */
+const letters = t => { let n = 0; return t.split(' ').map(w => `<span class="w">${[...w].map(c => `<span class="ch" style="--i:${n++}">${esc(c)}</span>`).join('')}</span>`).join(' '); };
 const evHTML = ev => (ev || []).map(e => `<blockquote class="ev">“${esc(e[0])}”<cite>${esc(e[2])} ${cite(e[1])}</cite></blockquote>`).join('');
 const tagsHTML = q => `<p class="tags">${q.theme ? `<span>${esc(THEME[q.theme])}</span>` : ''}<span>${esc(ILT[q.ilt])}</span></p>`;
 
 V.title = () => `<div class="page gut t-title">
-    <h1>${esc(GAME.title)}</h1>
+    <h1 aria-label="${esc(GAME.title)}">${letters(GAME.title)}</h1>
     <div class="t-rule">
       <div class="t-idea"><p class="idea">${esc(GAME.idea)}</p>
         <p class="sub">Twelve questions on the choices in <i>${esc(GAME.novel)}</i> by ${esc(GAME.author)}.</p></div>
@@ -281,7 +323,7 @@ V.title = () => `<div class="page gut t-title">
       </form>
     </div>
   </div>
-  <div class="strip">${SCENE}</div>`;
+  <div class="strip">${scene('hero')}</div>`;
 
 function bodyHTML(q, r) {
   const c = r.cur, fb = r.phase === 'fb', dis = fb ? ' disabled' : '';
@@ -317,16 +359,16 @@ V.q = () => { const r = state.run, q = QUESTIONS[r.i], fb = r.phase === 'fb', wi
     <div class="tbar" aria-hidden="true"><i id="tbar" style="transform:scaleX(${fb ? (r.left / r.limit).toFixed(4) : 1})"></i></div>
     <div class="page gut q q-${q.type}${wide ? ' wide' : ''}${fresh ? ' enter' : ''}${fb ? ' is-fb' : ''}${fb && r.cur.last.ok === false ? ' is-miss' : ''}">
       <div class="q-main"><h1>${esc(q.prompt)}</h1>${q.statement ? `<p class="statement">${esc(q.statement)}</p>` : ''}${inMain ? bodyHTML(q, r) : fb ? fbHTML(q, r) : ''}</div>
-      <div class="q-side">${fb && inMain ? fbHTML(q, r) : `<div class="plate">${art(q.art)}</div>`}${inMain ? '' : bodyHTML(q, r)}</div>
+      <div class="q-side"><div class="plate">${scene(q.art, fb ? (r.cur.last.ok ? 'win' : r.cur.last.ok === false ? 'miss' : '') : '')}</div>${inMain ? (fb ? fbHTML(q, r) : '') : bodyHTML(q, r)}</div>
     </div>`; };
 
 V.end = () => { const r = state.run, tier = tierFor(r.correct), name = prefs.name || 'Player';
-  return `<canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+  return `<div class="end-bg">${scene('end')}<div class="veil"></div></div><canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
     <div class="page gut end">
       <div class="e-main"><p class="e-name">${esc(name)}</p>
         <p class="e-score" id="bigScore" aria-label="Score ${r.score}">${r.score}</p>
         <p class="e-tier"><span>${esc(tier)}</span></p></div>
-      <div class="e-side"><div class="plate">${art('ridge')}</div>
+      <div class="e-side">
         <ul class="e-stats"><li><b>${r.correct}</b> of ${SCORED} right</li><li><b>${r.best}</b> best streak</li><li><b>${r.log.filter(l => l.ok === null && l.gain).length}</b> of ${QUESTIONS.length - SCORED} stands taken</li></ul>
         <div class="acts"><button class="btn" data-act="play" id="go">Play again</button><button class="link" data-act="home">Title</button></div></div>
     </div>`; };
@@ -340,9 +382,9 @@ const stepper = () => `<nav class="stepper gut" aria-label="Host steps">${STEP_N
 V.host = () => { const k = stepKey(), h = state.host; let body = '';
   if (k === 'lobby') body = `<div class="page gut"><div class="h-main"><h1>Join</h1><p class="url">${esc(shortUrl() || 'Open the game on your own device')}</p>
         <ol class="how"><li>Type your name.</li><li>Press Play.</li><li>Hold up your score at the end.</li></ol></div>
-      <div class="h-side">${SITE_URL ? '<span class="qr" data-qr></span>' : `<div class="plate">${art('trail')}</div>`}</div></div>`;
+      <div class="h-side">${SITE_URL ? '<span class="qr" data-qr></span>' : `<div class="plate">${scene('trail')}</div>`}</div></div>`;
   else if (k === 'gift') body = `<div class="page gut"><div class="h-main"><h1>${esc(GIFT.title)}</h1><p class="lede">${esc(GIFT.body)}</p><p class="tags"><span>${esc(ILT[GIFT.ilt])}</span></p></div>
-      <div class="h-side"><div class="plate">${art('fire')}</div>${evHTML(GIFT.ev)}</div></div>`;
+      <div class="h-side"><div class="plate">${scene('fire')}</div>${evHTML(GIFT.ev)}</div></div>`;
   else { const di = +k.slice(-1), d = DEBRIEF[di], sq = d.stand !== undefined ? QUESTIONS[d.stand] : null, t = h.tally[di] || (h.tally[di] = sq ? sq.opts.map(() => 0) : []), max = Math.max(1, ...t), open = !!h.shown[di];
     body = `<div class="page gut"><div class="h-main"><h1 class="dq">${esc(d.q)}</h1>
         ${sq ? `<div class="tally" aria-label="Show of hands"><p class="tl">${esc(sq.prompt)}</p>${sq.opts.map((o, i) => `<div class="trow"><span class="nm">${esc(o)}</span><i style="width:${(t[i] / max * 100).toFixed(0)}%"></i><button class="pm" data-act="tally" data-d="${di}" data-i="${i}" data-v="-1" aria-label="One fewer for ${esc(o)}">&minus;</button><b>${t[i]}</b><button class="pm" data-act="tally" data-d="${di}" data-i="${i}" data-v="1" aria-label="One more for ${esc(o)}">+</button></div>`).join('')}</div>` : ''}
@@ -374,6 +416,19 @@ function burst(gain) {
   const f = document.createElement('b'); f.textContent = '+' + gain; f.style.left = cx + 'px'; f.style.top = cy + 'px'; layer.appendChild(f);
   f.animate([{ transform: 'translate(-50%,-50%) scale(.7)', opacity: 0 }, { transform: 'translate(-50%,-130%) scale(1.15)', opacity: 1, offset: .28 }, { transform: `translate(calc(-50% + ${(b.left + b.width / 2 - cx).toFixed(0)}px),calc(-50% + ${(b.top + b.height / 2 - cy).toFixed(0)}px)) scale(.6)`, opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
   setTimeout(() => layer.remove(), 1000);
+}
+function banner(text) { if (calm()) return; const b = document.createElement('p'); b.className = 'banner'; b.setAttribute('aria-hidden', 'true'); b.innerHTML = `<svg class="flm" style="--s:5" viewBox="0 0 24 28"><path d="M12 27Q1 20 9 7 11 14 14 10 23 19 12 27Z"/></svg>${esc(text)}`; document.body.appendChild(b); setTimeout(() => b.remove(), 1700); }
+/* The opening: once per session, skipped by any key or click, never under reduced motion. */
+function intro() {
+  let seen = false; try { seen = sessionStorage.getItem('hts-intro') === '1'; sessionStorage.setItem('hts-intro', '1'); } catch (e) {}
+  if (seen || calm() || state.screen !== 'title') return;
+  const el = document.createElement('div'); el.className = 'intro'; el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = `${scene('hero')}<div class="i-pad"></div><div class="page gut t-title"><h1>${letters(GAME.title)}</h1></div><p class="i-skip">Skip</p>`;
+  document.body.appendChild(el); app.classList.add('intro-on');
+  let done = false;
+  const key = e => { e.preventDefault(); e.stopPropagation(); end(true); };
+  const end = fast => { if (done) return; done = true; removeEventListener('keydown', key, true); el.classList.add('out'); if (fast) { el.classList.add('fast'); app.classList.remove('intro-on'); } else setTimeout(() => app.classList.remove('intro-on'), 1500); setTimeout(() => el.remove(), fast ? 230 : 650); };
+  addEventListener('keydown', key, true); el.addEventListener('click', () => end(true)); setTimeout(() => end(false), 3500);
 }
 function confetti() {
   const cv = $('#confetti'); if (!cv || calm()) return; const cs = getComputedStyle(document.documentElement), cols = ['--accent', '--rule', '--accent-ink', '--soft'].map(v => cs.getPropertyValue(v).trim() || '#C9822B');
@@ -466,5 +521,5 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { if (e.key === ' ' && e.target.tagName !== 'INPUT' && state.screen === 'host') e.preventDefault(); });
 
-loadPrefs(); applySet(true); render();
+loadPrefs(); applySet(true); render(); intro();
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => state); } catch (e) {}
