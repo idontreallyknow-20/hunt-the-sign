@@ -140,7 +140,7 @@
     } catch (e) {}
     stage.innerHTML = `<div class="view lobby">
       <div class="how"><h1 class="title">Hunt the Sign</h1>
-        <p class="url">${esc(joinText)}</p>
+        <p class="url">${joinText.split('/').map((part, i, all) => `<span>${esc(part)}${i < all.length - 1 ? '/' : ''}</span>`).join('<wbr>')}</p>
         <div class="qr">${qr}</div></div>
       <div class="who"><p class="n" id="n">0</p>
         <div class="names" id="names"></div></div></div>`;

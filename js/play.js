@@ -113,8 +113,9 @@
     draw();
     try {
       const r = await rpc('hts_power', { p_player: session.player, p_token: session.token, p_q: q, p_power: name }, 4000);
-      if (r.ok) power.hide = r.hide || null;
+      if (r.ok) { if (power && power.q === q) power.hide = r.hide || null; }
       else if (power && power.q === q) power = null;
+      draw();
     } catch (e) {
       if (power && power.q === q) power = null;
     }

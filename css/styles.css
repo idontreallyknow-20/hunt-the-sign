@@ -153,7 +153,8 @@ body.tone-no { background: var(--no-bg); }
 .lobby { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 4vw; }
 .lobby .how { display: flex; flex-direction: column; min-height: 0; }
 .lobby .title { font-size: clamp(48px, 6.4vw, 120px); margin: 0 0 1.5vh; }
-.lobby .url { font-size: clamp(18px, 2vw, 40px); font-weight: 600; word-break: break-all; line-height: 1.25; }
+.lobby .url { font-size: clamp(18px, 2vw, 40px); font-weight: 600; line-height: 1.25; }
+.lobby .url span { white-space: nowrap; }
 .lobby .qr { margin-top: 2.5vh; flex: 1; min-height: 0; }
 .lobby .qr svg { height: 100%; max-height: 50vh; width: auto; display: block; background: #fff; border: 1px solid var(--line); }
 .lobby .who { display: flex; flex-direction: column; min-height: 0; }
