@@ -3,58 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://uhgzeuvybyohdbfuhfil.supabase.co; base-uri 'self'; form-action 'self'">
 <title>Hunt the Sign</title>
-<meta name="description" content="A class game for Medicine Walk by Richard Wagamese. Twelve questions on one choice: protect someone, or turn away.">
-<link rel="canonical" href="https://idontreallyknow-20.github.io/hunt-the-sign/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Hunt the Sign">
-<meta property="og:title" content="Hunt the Sign">
-<meta property="og:description" content="A class game for Medicine Walk by Richard Wagamese. Twelve questions on one choice: protect someone, or turn away.">
-<meta property="og:url" content="https://idontreallyknow-20.github.io/hunt-the-sign/">
-<meta property="og:image" content="https://idontreallyknow-20.github.io/hunt-the-sign/og-image.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Hunt the Sign, set in large type above a line drawing of a farm, a trail and a ridge under the moon.">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Hunt the Sign">
-<meta name="twitter:description" content="A class game for Medicine Walk by Richard Wagamese. Twelve questions on one choice: protect someone, or turn away.">
-<meta name="twitter:image" content="https://idontreallyknow-20.github.io/hunt-the-sign/og-image.png">
-<meta name="theme-color" content="#F5F1E8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141B17" media="(prefers-color-scheme: dark)">
+<meta name="description" content="A live class game for Medicine Walk by Richard Wagamese.">
+<meta name="theme-color" content="#f6f4ee">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="manifest" href="site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Domine:wght@400..700&family=Nunito+Sans:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="styles.css">
+<link rel="preload" href="fonts/fraunces-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-<div class="app" id="app" data-screen="title" data-who="solo">
-  <header class="bar gut">
-    <button class="mark" data-act="home">Hunt the Sign</button>
-    <div class="clock" id="clock" hidden>
-      <button class="link" data-act="less" aria-label="Take 30 seconds off the clock">&minus;30</button>
-      <output class="time" id="time" aria-label="Time left">5:00</output>
-      <button class="link" data-act="more" aria-label="Add 30 seconds to the clock">+30</button>
-      <button class="link" id="playBtn" data-act="clock">Start</button>
-    </div>
-    <button class="link" id="joinBtn" data-act="join" hidden>Join</button>
-    <button class="link" id="notesBtn" data-act="notes" aria-pressed="false" hidden>Notes</button>
-    <button class="link" id="setBtn" data-act="settings">Settings</button>
-  </header>
-  <aside class="notes gut" id="notes" aria-label="Presenter notes" hidden></aside>
+<div class="play">
+  <header><b>Hunt the Sign</b><span id="who"></span></header>
+  <div class="net" id="net" role="status" hidden>Reconnecting.</div>
   <main id="main"></main>
-  <footer class="foot gut">
-    <span>Wagamese, Richard. <i>Medicine Walk</i>. McClelland &amp; Stewart, 2014.</span>
-    <span>Made with AI assistance (Claude)</span>
-  </footer>
 </div>
-<div class="scrim" id="scrim" hidden></div>
-<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h" hidden></aside>
-<div class="join" id="join" role="dialog" aria-modal="true" aria-label="Join" hidden></div>
-<noscript><p class="gut">Hunt the Sign needs JavaScript to run.</p></noscript>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="app.js"></script>
+<noscript><p>Hunt the Sign needs JavaScript to run.</p></noscript>
+<script src="js/config.js"></script>
+<script src="js/net.js"></script>
+<script src="js/play.js"></script>
 </body>
 </html>

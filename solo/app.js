@@ -2,7 +2,7 @@
 
 /* ---------- configuration ---------- */
 /* The public address of the site. Leave empty to hide the join code. */
-const SITE_URL = "https://idontreallyknow-20.github.io/hunt-the-sign";
+const SITE_URL = "https://idontreallyknow-20.github.io/hunt-the-sign/solo";
 /* =====================================================================================
    GROUP CONTENT
    Every quote was checked word for word against the novel. Every page comes from the
