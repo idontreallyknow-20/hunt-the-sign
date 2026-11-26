@@ -64,12 +64,44 @@ h1, h2, p { margin: 0; }
 .confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
 .confetti i { position: absolute; top: 0; display: block; will-change: transform; }
 
+/* ---------------------------------------------------------------- night scene */
+
+:root.night { --paper: #111814; --panel: #1c2520; --line: #46544b; --ink: #ede7da; --muted: #b5bfb8; --ok: #7fcf96; --no: #ef8a80; color-scheme: dark; }
+.night body { background: #0b1210; }
+.scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 800ms var(--ease); background: linear-gradient(#0a100e, #15201b 52%, #2c3b34 78%); }
+.night .scene { opacity: 1; }
+.scene svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scene .tw { animation: twinkle 3.8s ease-in-out infinite; animation-delay: var(--d); }
+.scene .fl { transform-box: fill-box; transform-origin: 50% 100%; animation: flick 0.9s ease-in-out infinite alternate; }
+.scene .f2 { animation-duration: 0.68s; }
+.scene .f3 { animation-duration: 0.47s; }
+.scene .glow { transform-box: fill-box; transform-origin: center; animation: glow 2.3s ease-in-out infinite alternate; }
+.scene .em { opacity: 0; animation: ember var(--t) linear infinite; animation-delay: var(--d); }
+.scene .trail { stroke-dasharray: 14 10; animation: march 2.6s linear infinite; }
+.scene .shoot { opacity: 0; animation: shoot 13s linear infinite 4s; }
+:root:not(.night) .scene * { animation-play-state: paused; }
+@keyframes twinkle { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.12; } }
+@keyframes flick { 0% { transform: scale(1, 1) skewX(0deg); } 50% { transform: scale(0.9, 1.14) skewX(-5deg); } 100% { transform: scale(1.07, 0.9) skewX(4deg); } }
+@keyframes glow { from { opacity: 0.7; transform: scale(0.93); } to { opacity: 1; transform: scale(1.06); } }
+@keyframes ember { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--x), -150px); opacity: 0; } }
+@keyframes march { to { stroke-dashoffset: -24; } }
+@keyframes shoot { 0%, 92% { transform: translateX(0); opacity: 0; } 93% { opacity: 1; } 100% { transform: translateX(300px); opacity: 0; } }
+
+.play, .host { position: relative; z-index: 1; }
+.night .title { text-shadow: 0 0 44px rgba(243, 233, 210, 0.28); }
+.night .host .top, .night .host .ctl { background: rgba(10, 16, 14, 0.5); }
+.night .names button { background: rgba(10, 16, 14, 0.62); }
+.night .lobby .n, .night .tier { color: #e0a458; }
+.night .step .blk { background: rgba(10, 16, 14, 0.62); }
+.night .step.p1 .blk { background: var(--ink); }
+.night .final .side { background: rgba(10, 16, 14, 0.8); padding-right: 1vw; }
+
 /* ---------------------------------------------------------------- phone */
 
 body.tone-ok { background: var(--ok-bg); }
 body.tone-no { background: var(--no-bg); }
 
-.play { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; padding: 0 16px; }
+.play { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; padding: 0 16px; }
 .play header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .play header b { font-weight: 600; }
 .play main { flex: 1; display: flex; flex-direction: column; padding: 20px 0 24px; }
@@ -80,10 +112,11 @@ body.tone-no { background: var(--no-bg); }
 .center { justify-content: center; }
 
 .title { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 44px; line-height: 1.05; letter-spacing: -0.01em; margin: 12px 0 24px; }
-.join input { width: 100%; border: 2px solid var(--ink); background: #fff; padding: 14px; font-size: 20px; }
+.join { justify-content: center; }
+.join input { width: 100%; border: 2px solid var(--ink); background: #fff; color: #15181c; padding: 14px; font-size: 20px; }
 .join .btn { width: 100%; margin-top: 12px; font-size: 18px; padding: 14px; }
 .err { color: var(--no); margin-top: 12px; min-height: 1.5em; }
-.credits { margin-top: auto; align-self: flex-start; font-size: 12px; color: var(--muted); }
+.credits { position: absolute; left: 16px; bottom: 16px; font-size: 12px; color: var(--muted); }
 
 .big { font-family: var(--serif); font-size: 34px; line-height: 1.2; font-weight: 500; }
 .dots { display: flex; gap: 8px; margin-top: 20px; }

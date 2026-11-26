@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const { rpc, esc, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, now } = window.HTS;
+  const paintScene = window.HTS.scene || (() => {}), night = window.HTS.night || (() => {});
   const stage = document.getElementById('stage');
   const ctl = document.getElementById('ctl');
   const where = document.getElementById('where');
@@ -94,6 +95,7 @@
     if (!s) return;
     const p = phase();
     const inGame = p !== 'none' && p !== 'lobby';
+    night(!inGame || p === 'final');
     count.textContent = p === 'none' ? '' : s.players + (s.players === 1 ? ' player' : ' players');
     where.textContent = inGame && p !== 'final' ? `${s.q + 1} / ${s.total}` : '';
 
@@ -339,5 +341,6 @@
   }
   setInterval(tick, 100);
 
+  paintScene({ moon: [1480, 170, 40], shoot: [1130, 70] });
   poll();
 })();

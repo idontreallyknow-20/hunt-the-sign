@@ -2,6 +2,8 @@
 (function () {
   'use strict';
   const { rpc, esc, ord, fmt, LETTERS, phaseNow, now, MODES, POWERS, confetti } = window.HTS;
+  /* A phone can hold an older copy of the shared script for a few minutes after an update. */
+  const paintScene = window.HTS.scene || (() => {}), night = window.HTS.night || (() => {});
   const main = document.getElementById('main');
   const who = document.getElementById('who');
   const net = document.getElementById('net');
@@ -188,12 +190,12 @@
     } else if (p === 'final') {
       const m = me();
       key = 'final';
-      tone = m.rank <= 3 ? 'ok' : '';
       html = `<div class="screen res center"><p class="place pop">${ord(m.rank || 1)}</p>
         <p class="tier">${esc(m.tier || '')}</p>
         <p class="pts">${fmt(m.score)}</p>
         <p class="label">${m.correct_count || 0} of ${m.scored || 0}</p></div>`;
     }
+    night(key.startsWith('join') || key === 'none' || key === 'lobby' || key === 'final');
     if (key !== viewKey || force) {
       viewKey = key;
       const keepName = document.getElementById('nm');
@@ -261,5 +263,7 @@
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 
+  paintScene({ moon: [925, 125, 26], shoot: [625, 205] });
+  draw();
   poll();
 })();

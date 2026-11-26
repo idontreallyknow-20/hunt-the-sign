@@ -79,7 +79,9 @@
     if (calm || !box || !box.animate) return;
     const layer = document.createElement('div');
     layer.className = 'confetti';
-    const colours = ['#15181c', '#1c6b37', '#b8860b', '#15181c', '#c9c4b6'];
+    const colours = document.documentElement.classList.contains('night')
+      ? ['#ede7da', '#e0a458', '#7fcf96', '#c9822b', '#ede7da']
+      : ['#15181c', '#1c6b37', '#b8860b', '#15181c', '#c9c4b6'];
     const h = box.clientHeight || window.innerHeight;
     for (let i = 0; i < n; i++) {
       const el = document.createElement('i');
@@ -96,5 +98,69 @@
     setTimeout(() => layer.remove(), 6200);
   }
 
-  window.HTS = { rpc, esc, ord, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, calm, now: () => Date.now() + offset };
+  /* The night scene behind the opening and closing screens: stars, a moon, three ridges,
+     spruce, a trail of signs and a small fire. Drawn once, then faded in and out. */
+  function scene(o) {
+    if (document.querySelector('.scene')) return;
+    let seed = 11;
+    const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const W = 1600, H = 900, n = v => v.toFixed(1);
+    let stars = '';
+    for (let i = 0; i < 110; i++) {
+      const z = r() < 0.18 ? 3.4 : 2;
+      stars += `<rect class="st${i % 3 === 0 ? ' tw' : ''}" style="--d:${n(r() * 6)}s" x="${n(r() * W)}" y="${n(r() * 640)}" width="${z}" height="${z}" opacity="${n(0.35 + r() * 0.65)}"/>`;
+    }
+    const ridge = (base, a1, f1, a2, f2, jit, step, fill) => {
+      let d = `M-20 ${H}`;
+      for (let x = -20; x <= W + 20; x += step) d += `L${x} ${n(base + a1 * Math.sin(x / f1 + base) + a2 * Math.sin(x / f2 + 2) + (r() - 0.5) * jit)}`;
+      return `<path d="${d}L${W + 20} ${H}Z" fill="${fill}"/>`;
+    };
+    const hill = x => 806 + 16 * Math.sin(x / 250 + 1.3) + 7 * Math.sin(x / 83 + 0.4);
+    let near = `M-20 ${H}`;
+    for (let x = -20; x <= W + 20; x += 20) near += `L${x} ${n(hill(x))}`;
+    let trees = '';
+    for (let i = 0; i < 30; i++) {
+      const x = r() * W;
+      if (Math.abs(x - 800) < 150) continue;
+      const h = 46 + r() * 84, w = h * 0.2, y = hill(x) + 4;
+      trees += `<path d="M${n(x)} ${n(y - h)}L${n(x + w * 0.5)} ${n(y - h * 0.62)}L${n(x + w * 0.22)} ${n(y - h * 0.62)}L${n(x + w * 0.8)} ${n(y - h * 0.3)}L${n(x + w * 0.3)} ${n(y - h * 0.3)}L${n(x + w)} ${n(y)}L${n(x - w)} ${n(y)}L${n(x - w * 0.3)} ${n(y - h * 0.3)}L${n(x - w * 0.8)} ${n(y - h * 0.3)}L${n(x - w * 0.22)} ${n(y - h * 0.62)}L${n(x - w * 0.5)} ${n(y - h * 0.62)}Z"/>`;
+    }
+    let trail = '';
+    for (let x = 270; x <= 750; x += 30) trail += (trail ? 'L' : 'M') + x + ' ' + n(hill(x) + 22 - (x - 270) / 480 * 12);
+    let embers = '';
+    for (let i = 0; i < 9; i++) embers += `<rect class="em" x="${n(-10 + r() * 20)}" y="-34" width="3" height="3" fill="#e0a458" style="--x:${n((r() - 0.5) * 70)}px;--t:${n(2.4 + r() * 2.6)}s;--d:${n(r() * 4)}s"/>`;
+    const [mx, my, mq] = o.moon, fy = n(hill(800) + 6);
+    const el = document.createElement('div');
+    el.className = 'scene';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <defs><radialGradient id="sc-m"><stop offset="0" stop-color="#f3e7c9" stop-opacity="0.45"/><stop offset="1" stop-color="#f3e7c9" stop-opacity="0"/></radialGradient>
+      <radialGradient id="sc-f"><stop offset="0" stop-color="#e0a458" stop-opacity="0.55"/><stop offset="0.5" stop-color="#c9822b" stop-opacity="0.16"/><stop offset="1" stop-color="#c9822b" stop-opacity="0"/></radialGradient></defs>
+      <g fill="#f3e9d2">${stars}</g>
+      <g transform="rotate(20 ${o.shoot[0]} ${o.shoot[1]})"><rect class="shoot" x="${o.shoot[0]}" y="${o.shoot[1]}" width="70" height="2" fill="#f3e9d2"/></g>
+      <circle cx="${mx}" cy="${my}" r="${mq * 4.4}" fill="url(#sc-m)"/><circle cx="${mx}" cy="${my}" r="${mq}" fill="#f3e9d2"/>
+      <circle cx="${mx - mq * 0.3}" cy="${my - mq * 0.25}" r="${mq * 0.2}" fill="#dccfb0"/><circle cx="${mx + mq * 0.28}" cy="${my + mq * 0.3}" r="${mq * 0.14}" fill="#dccfb0"/>
+      ${ridge(640, 46, 210, 22, 61, 26, 46, '#33403a')}${ridge(716, 34, 170, 16, 47, 18, 38, '#232e28')}
+      <path d="${near}L${W + 20} ${H}Z" fill="#141c17"/>
+      <g fill="#0d1411">${trees}</g>
+      <path class="trail" d="${trail}" fill="none" stroke="#c9822b" stroke-width="4"/>
+      <g transform="translate(800 ${fy}) scale(1.5)">
+        <circle class="glow" r="120" fill="url(#sc-f)"/>
+        <path class="fl f1" d="M-16 0Q-24 -26 0 -54Q24 -26 16 0Z" fill="#c9822b"/>
+        <path class="fl f2" d="M-10 0Q-14 -18 0 -37Q14 -18 10 0Z" fill="#e0a458"/>
+        <path class="fl f3" d="M-5 0Q-7 -10 0 -21Q7 -10 5 0Z" fill="#ffe9b0"/>
+        <rect x="-25" y="-3" width="50" height="6" fill="#070b09" transform="rotate(11)"/><rect x="-25" y="-3" width="50" height="6" fill="#070b09" transform="rotate(-11)"/>
+        ${embers}
+      </g></svg>`;
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  function night(on) {
+    const root = document.documentElement;
+    if (root.classList.contains('night') === !!on) return;
+    root.classList.toggle('night', !!on);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', on ? '#0b1210' : '#f6f4ee');
+  }
+
+  window.HTS = { rpc, esc, ord, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, calm, scene, night, now: () => Date.now() + offset };
 })();
