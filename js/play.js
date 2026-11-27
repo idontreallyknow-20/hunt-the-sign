@@ -4,6 +4,8 @@
   const { rpc, esc, ord, fmt, LETTERS, phaseNow, now, MODES, POWERS, confetti } = window.HTS;
   /* A phone can hold an older copy of the shared script for a few minutes after an update. */
   const paintScene = window.HTS.scene || (() => {}), night = window.HTS.night || (() => {});
+  const mood = window.HTS.mood || (() => {});
+  const sound = window.HTS.sound || { play() {}, buzz() {}, on: () => false, toggle: () => false };
   const main = document.getElementById('main');
   const who = document.getElementById('who');
   const net = document.getElementById('net');
@@ -81,6 +83,8 @@
         session = { game: r.game, player: r.player, token: r.token, name: r.name };
         lastName = name;
         save();
+        sound.play('join');
+        if (window.HTS_SKY) window.HTS_SKY.burst(1);
       }
     } catch (e) {
       notice = 'No connection. Try again.';
@@ -94,6 +98,7 @@
     if (!s || !session || answered() || phaseNow(s) !== 'open' || hidden().includes(i)) return;
     const q = s.q;
     pending = { q, choice: i };
+    sound.play('lock');
     draw();
     for (let tries = 0; tries < 4; tries++) {
       try {
@@ -112,6 +117,7 @@
     if (!s || !session || answered() || phaseNow(s) !== 'open' || powerNow() || spent(name)) return;
     const q = s.q;
     power = { q, power: name, hide: null };
+    sound.play('power');
     draw();
     try {
       const r = await rpc('hts_power', { p_player: session.player, p_token: session.token, p_q: q, p_power: name }, 4000);
@@ -131,7 +137,7 @@
   function draw(force) {
     const p = phaseNow(s);
     who.textContent = session ? session.name : '';
-    let key, html, tone = '';
+    let key, html, tone = '', locked = false;
     if (!session) {
       key = 'join|' + notice + '|' + joining;
       if (key === viewKey && !force) return;
@@ -159,21 +165,35 @@
       const c = choice(), done = c !== null, q = s.question, shut = done || p === 'closed';
       const pn = powerNow(), hide = hidden(), peek = (peeking() && me().peek) || null;
       const scored = q.kind !== 'poll';
-      key = [p, s.q, c, late === s.q, pn, hide.join(''), peek ? peek.join(',') : ''].join('|');
-      const powers = scored ? `<div class="powers">${Object.keys(POWERS).map(name => {
-        const on = pn === name, na = name === 'fifty' && q.opts.length < 4;
-        const off = shut || na || (!on && (pn || spent(name)));
-        return `<button class="pw ${on ? 'on' : ''} ${spent(name) && !on ? 'spent' : ''}" data-p="${name}" ${off || on ? 'disabled' : ''}>${POWERS[name]}</button>`;
-      }).join('')}</div>` : '';
-      html = `<div class="screen"><div class="clockrow"><span>${s.q + 1} of ${s.total} ${modeChip(q)}${pn === 'double' ? '<span class="chip">2x</span>' : ''}</span><b id="secs"></b></div>
-        <div class="bar" id="bar"><i></i></div>
-        <p class="prompt">${esc(q.prompt)}</p>
-        <div class="opts ${shut ? 'locked' : ''}">${q.opts.map((o, i) =>
-          `<button class="opt ${c === i ? 'picked' : ''} ${hide.includes(i) ? 'gone' : ''}" data-i="${i}" style="--i:${i}" ${shut || hide.includes(i) ? 'disabled' : ''}><span class="k">${LETTERS[i]}</span><span>${esc(o)}</span><span class="n">${peek ? peek[i] || 0 : ''}</span></button>`).join('')}</div>
-        ${powers}
-        <p class="wait" role="status">${done ? 'Locked in.' : p === 'closed' ? (late === s.q ? 'Too late.' : 'Time.') : ''}</p></div>`;
+      const top = `<div class="clockrow"><span>${s.q + 1} of ${s.total} ${modeChip(q)}${pn === 'double' ? '<span class="chip">2x</span>' : ''}</span><b id="secs"></b></div>
+        <div class="bar" id="bar"><i></i></div>`;
+      if (done) {
+        /* the answer is in: its own screen, until the reveal */
+        locked = true;
+        key = [p, s.q, 'locked', c].join('|');
+        html = `<div class="screen lockd">${top}
+          <div class="mid">
+            <p class="big pop">Locked in.</p>
+            <div class="pick"><span class="k">${LETTERS[c]}</span><span>${esc(q.opts[c])}</span></div>
+            <div class="dots"><i></i><i></i><i></i></div>
+            <p class="wait" role="status">${p === 'closed' ? 'Time.' : 'Waiting for the room.'}</p>
+          </div></div>`;
+      } else {
+        key = [p, s.q, c, late === s.q, pn, hide.join(''), peek ? peek.join(',') : ''].join('|');
+        const powers = scored ? `<div class="powers">${Object.keys(POWERS).map(name => {
+          const on = pn === name, na = name === 'fifty' && q.opts.length < 4;
+          const off = shut || na || (!on && (pn || spent(name)));
+          return `<button class="pw ${on ? 'on' : ''} ${spent(name) && !on ? 'spent' : ''}" data-p="${name}" ${off || on ? 'disabled' : ''}>${POWERS[name]}</button>`;
+        }).join('')}</div>` : '';
+        html = `<div class="screen">${top}
+          <p class="prompt">${esc(q.prompt)}</p>
+          <div class="opts ${shut ? 'locked' : ''}">${q.opts.map((o, i) =>
+            `<button class="opt ${hide.includes(i) ? 'gone' : ''}" data-i="${i}" style="--i:${i}" ${shut || hide.includes(i) ? 'disabled' : ''}><span class="k">${LETTERS[i]}</span><span>${esc(o)}</span><span class="n">${peek ? peek[i] || 0 : ''}</span></button>`).join('')}</div>
+          ${powers}
+          <p class="wait" role="status">${p === 'closed' ? (late === s.q ? 'Too late.' : 'Time.') : ''}</p></div>`;
+      }
     } else if (p === 'reveal') {
-      const m = me(), poll = s.question.kind === 'poll';
+      const m = me(), q = s.question, poll = q.kind === 'poll', rv = s.reveal || {};
       key = 'reveal|' + s.q;
       const moved = (m.prev_rank || m.rank) - m.rank;
       let verdict;
@@ -181,27 +201,34 @@
       else if (!m.answered) { verdict = 'No answer.'; tone = 'no'; }
       else if (m.correct) { verdict = 'Correct.'; tone = 'ok'; }
       else { verdict = 'Wrong.'; tone = 'no'; }
-      html = `<div class="screen res center">
+      /* a miss gets its own screen: the fire dies down and the right sign is shown */
+      const truth = tone === 'no' && typeof rv.answer === 'number' && q.opts[rv.answer] != null
+        ? `<p class="label sign">the sign was</p><div class="pick ok"><span class="k">${LETTERS[rv.answer]}</span><span>${esc(q.opts[rv.answer])}</span></div>` : '';
+      html = `<div class="screen res ${tone || 'poll'} center">
         <p class="verdict ${tone} pop">${verdict}</p>
-        <p class="gain" id="gain" data-to="${m.gain || 0}">+0</p>
-        ${!poll && m.streak >= 2 ? `<p class="streak">streak of ${m.streak}</p>` : ''}
+        ${tone === 'no' ? truth : `<p class="gain" id="gain" data-to="${m.gain || 0}">+0</p>`}
+        ${!poll && m.streak >= 2 ? `<p class="streak"><span class="chip">streak of ${m.streak}</span></p>` : ''}
         <p class="rank">${ord(m.rank || 1)}${moved > 0 ? ` <span class="up">▲ ${moved}</span>` : moved < 0 ? ` <span class="down">▼ ${-moved}</span>` : ''}</p>
         <p class="pts">${fmt(m.score)}</p></div>`;
     } else if (p === 'final') {
       const m = me();
       key = 'final';
-      html = `<div class="screen res center"><p class="place pop">${ord(m.rank || 1)}</p>
+      html = `<div class="screen res fin center"><p class="place pop">${ord(m.rank || 1)}</p>
         <p class="tier">${esc(m.tier || '')}</p>
         <p class="pts">${fmt(m.score)}</p>
         <p class="label">${m.correct_count || 0} of ${m.scored || 0}</p></div>`;
     }
-    night(key.startsWith('join') || key === 'none' || key === 'lobby' || key === 'final');
+    night(true);
+    const kind = key.split('|')[0];
+    feel = kind === 'ready' ? 'ready' : kind === 'open' || kind === 'closed' ? (locked ? 'locked' : 'open')
+      : kind === 'reveal' ? (tone === 'ok' ? 'ok' : tone === 'no' ? 'no' : 'poll') : kind === 'final' ? 'final' : 'lobby';
+    setMood();
     if (key !== viewKey || force) {
       viewKey = key;
       const keepName = document.getElementById('nm');
       const typed = keepName ? keepName.value : null;
       main.innerHTML = html;
-      const sc = key.split('|')[0].replace('closed', 'open') + (s && session ? s.q : '');
+      const sc = key.split('|')[0].replace('closed', 'open') + (locked ? 'L' : '') + (s && session ? s.q : '');
       if (sc === scene && main.firstElementChild) main.firstElementChild.classList.add('still');
       const fresh = sc !== scene;
       scene = sc;
@@ -213,8 +240,23 @@
       const gain = document.getElementById('gain');
       if (gain) countUp(gain, Number(gain.dataset.to));
       if (fresh && key === 'final' && me().rank <= 3) confetti(document.querySelector('.play'), 60);
+      if (fresh) {
+        if (kind === 'open' && !locked) sound.play('go');
+        else if (kind === 'reveal') {
+          sound.play(tone === 'ok' ? 'ok' : tone === 'no' ? 'no' : 'poll');
+          sound.buzz(tone === 'ok' ? 40 : tone === 'no' ? [70, 50, 130] : 0);
+        } else if (kind === 'final') sound.play('fanfare');
+      }
     }
     tick();
+  }
+
+  /* The valley follows the game: the fire flares in the last five seconds of a question. */
+  let feel = 'lobby';
+  function setMood() {
+    let m = feel;
+    if (m === 'open' && s && s.closes_at - now() <= 5000 && phaseNow(s) === 'open') m = 'low';
+    mood(m, s && typeof s.q === 'number' ? s.q : 0);
   }
 
   function countUp(el, to) {
@@ -236,7 +278,7 @@
     const count = document.getElementById('count');
     if (count) {
       const n = String(Math.max(1, Math.min(3, Math.ceil((s.opens_at - t) / 1000))));
-      if (n !== lastCount) { lastCount = n; count.textContent = n; count.classList.remove('pop'); void count.offsetWidth; count.classList.add('pop'); }
+      if (n !== lastCount) { lastCount = n; count.textContent = n; count.classList.remove('pop'); void count.offsetWidth; count.classList.add('pop'); sound.play('tick'); }
     }
     const secs = document.getElementById('secs');
     const bar = document.getElementById('bar');
@@ -246,6 +288,7 @@
       secs.textContent = Math.ceil(left / 1000);
       bar.firstElementChild.style.transform = `scaleX(${Math.min(1, left / span)})`;
       bar.classList.toggle('low', left <= 5000);
+      if (feel === 'open') setMood();
     }
   }
   setInterval(tick, 100);
@@ -262,6 +305,17 @@
     if (v) { lastName = v; join(v); }
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+
+  /* sound switch, top right */
+  const head = document.querySelector('.play header');
+  if (head && window.HTS.sound) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'snd';
+    const label = () => { b.textContent = sound.on() ? 'sound on' : 'sound off'; b.setAttribute('aria-pressed', sound.on() ? 'true' : 'false'); };
+    b.addEventListener('click', () => { sound.toggle(); label(); if (sound.on()) sound.play('tick'); });
+    label();
+    head.appendChild(b);
+  }
 
   paintScene({ moon: [925, 125, 26], shoot: [625, 205] });
   draw();

@@ -79,9 +79,7 @@
     if (calm || !box || !box.animate) return;
     const layer = document.createElement('div');
     layer.className = 'confetti';
-    const colours = document.documentElement.classList.contains('night')
-      ? ['#ede7da', '#e0a458', '#7fcf96', '#c9822b', '#ede7da']
-      : ['#15181c', '#1c6b37', '#b8860b', '#15181c', '#c9c4b6'];
+    const colours = ['#f1eadb', '#f0aa4f', '#86dba0', '#c9822b', '#f1eadb'];
     const h = box.clientHeight || window.innerHeight;
     for (let i = 0; i < n; i++) {
       const el = document.createElement('i');
@@ -98,8 +96,8 @@
     setTimeout(() => layer.remove(), 6200);
   }
 
-  /* The night scene behind the opening and closing screens: stars, a moon, three ridges,
-     spruce, a trail of signs and a small fire. Drawn once, then faded in and out. */
+  /* The flat night scene: stars, a moon, three ridges, spruce, a trail of signs and a small
+     fire. It goes up first, and stays if the 3D valley (js/sky.js) cannot run on this device. */
   function scene(o) {
     if (document.querySelector('.scene')) return;
     let seed = 11;
@@ -151,16 +149,153 @@
         <path class="fl f3" d="M-5 0Q-7 -10 0 -21Q7 -10 5 0Z" fill="#ffe9b0"/>
         <rect x="-25" y="-3" width="50" height="6" fill="#070b09" transform="rotate(11)"/><rect x="-25" y="-3" width="50" height="6" fill="#070b09" transform="rotate(-11)"/>
         ${embers}
-      </g></svg>`;
+      </g></svg><i class="veil"></i><i class="wash"></i>`;
     document.body.insertBefore(el, document.body.firstChild);
+    loadSky();
   }
-  function night(on) {
-    const root = document.documentElement;
-    if (root.classList.contains('night') === !!on) return;
-    root.classList.toggle('night', !!on);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', on ? '#0b1210' : '#f6f4ee');
+  /* Every screen is a night screen now. Kept so an older page script can still call it. */
+  function night() {
+    document.documentElement.classList.add('night');
   }
 
-  window.HTS = { rpc, esc, ord, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, calm, scene, night, now: () => Date.now() + offset };
+  /* The 3D valley is one extra file, fetched after the game is already on screen.
+     ?sky=off in the address turns it off. */
+  function loadSky() {
+    if (/[?&]sky=off\b/.test(location.search)) return;
+    if (navigator.connection && navigator.connection.saveData) return;
+    const go = () => {
+      const tag = document.createElement('script');
+      tag.src = 'js/sky.js?v=4';
+      tag.async = true;
+      document.head.appendChild(tag);
+    };
+    if (document.readyState === 'complete') setTimeout(go, 60);
+    else window.addEventListener('load', () => setTimeout(go, 60));
+  }
+
+  /* What the valley should feel like right now: 'lobby', 'ready', 'open', 'low', 'locked',
+     'reveal', 'ok', 'no', 'poll' or 'final'. The stylesheet reads it too. */
+  let moodKey = '';
+  function mood(name, q) {
+    const k = name + '|' + (typeof q === 'number' ? q : '');
+    if (k === moodKey) return;
+    moodKey = k;
+    window.HTS.moodNow = [name, q];
+    document.documentElement.setAttribute('data-mood', name);
+    if (window.HTS_SKY) window.HTS_SKY.mood(name, q);
+  }
+
+  /* ---------- sound: a small synth, no audio files ---------- */
+
+  const SND = 'hts-sound';
+  let sndOn = true, unlocked = false, ac = null, out = null, noiseBuf = null, amb = null, wantAmb = false;
+  try { sndOn = localStorage.getItem(SND) !== '0'; } catch (e) {}
+  function audio() {
+    if (!sndOn || !unlocked) return null;
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { ac = new AC(); } catch (e) { return null; }
+      const comp = ac.createDynamicsCompressor();
+      out = ac.createGain();
+      out.gain.value = 0.6;
+      out.connect(comp); comp.connect(ac.destination);
+      const n = ac.sampleRate * 2, d = (noiseBuf = ac.createBuffer(1, n, ac.sampleRate)).getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === 'suspended') ac.resume().catch(() => {});
+    return ac.state === 'closed' ? null : ac;
+  }
+  function tone(f, at, dur, o) {
+    o = o || {};
+    const t = ac.currentTime + at, osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(f, t);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol || 0.2, t + (o.attack || 0.008));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(o.dest || out);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function hiss(at, dur, o) {
+    o = o || {};
+    const t = ac.currentTime + at, src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf; src.loop = true;
+    f.type = o.type || 'bandpass';
+    f.frequency.setValueAtTime(o.f || 1000, t);
+    if (o.fto) f.frequency.exponentialRampToValueAtTime(o.fto, t + dur);
+    f.Q.value = o.q || 1;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol || 0.1, t + (o.attack || 0.01));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(o.dest || out);
+    src.start(t, Math.random() * 1.5); src.stop(t + dur + 0.05);
+  }
+  const bell = (f, at, dur, vol) => { tone(f, at, dur, { vol }); tone(f * 2.01, at, dur * 0.6, { vol: vol * 0.3 }); tone(f * 3.02, at, dur * 0.3, { vol: vol * 0.1 }); };
+  const thud = (at, vol) => { tone(130, at, 0.28, { to: 48, vol: vol || 0.5, attack: 0.004 }); hiss(at, 0.06, { type: 'lowpass', f: 900, vol: (vol || 0.5) * 0.35, attack: 0.002 }); };
+  const SOUNDS = {
+    tick: () => { tone(740, 0, 0.1, { type: 'triangle', vol: 0.22 }); tone(370, 0, 0.12, { vol: 0.12 }); },
+    go: () => { bell(659.25, 0, 0.3, 0.2); bell(987.77, 0.1, 0.55, 0.22); },
+    low: () => { tone(1046.5, 0, 0.07, { type: 'triangle', vol: 0.2 }); tone(98, 0, 0.16, { to: 62, vol: 0.3 }); },
+    lock: () => { tone(520, 0, 0.13, { to: 830, type: 'triangle', vol: 0.22 }); },
+    power: () => { tone(330, 0, 0.26, { to: 1320, type: 'sawtooth', vol: 0.07 }); bell(1318.5, 0.2, 0.4, 0.14); },
+    join: () => { tone(620, 0, 0.1, { to: 1040, vol: 0.16 }); },
+    ok: () => { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(f, i * 0.085, 0.6, 0.2)); hiss(0, 0.5, { type: 'highpass', f: 5000, vol: 0.03, attack: 0.2 }); },
+    no: () => { tone(311.13, 0, 0.24, { type: 'triangle', vol: 0.2 }); tone(233.08, 0.2, 0.42, { type: 'triangle', vol: 0.2 }); thud(0.2, 0.4); },
+    poll: () => { bell(587.33, 0, 0.5, 0.16); },
+    reveal: () => { hiss(0, 0.45, { type: 'bandpass', f: 300, fto: 2600, q: 0.8, vol: 0.12, attack: 0.4 }); thud(0.45, 0.55); [392, 523.25, 659.25].forEach(f => bell(f, 0.47, 0.9, 0.13)); },
+    board: () => { hiss(0, 0.5, { type: 'bandpass', f: 500, fto: 3000, q: 1.2, vol: 0.07, attack: 0.25 }); },
+    step: () => { thud(0, 0.6); bell(392, 0.02, 0.5, 0.12); },
+    fanfare: () => {
+      thud(0, 0.7);
+      [523.25, 659.25, 783.99].forEach((f, i) => bell(f, i * 0.11, 0.4, 0.2));
+      [1046.5, 1318.5, 1568].forEach(f => { bell(f, 0.36, 1.6, 0.16); tone(f / 2, 0.36, 1.4, { type: 'triangle', vol: 0.07 }); });
+      hiss(0.36, 1.2, { type: 'highpass', f: 6000, vol: 0.04, attack: 0.05 });
+    }
+  };
+  function play(name) {
+    if (!SOUNDS[name] || !audio()) return;
+    try { SOUNDS[name](); } catch (e) {}
+  }
+  /* The fire for the room: a low roar, a little wind and the odd crackle. Host screen only. */
+  function ambient(on) {
+    wantAmb = !!on;
+    if (!wantAmb || !audio()) { if (amb) { amb(); amb = null; } return; }
+    if (amb) return;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(1, ac.currentTime + 2.5);
+    g.connect(out);
+    const roar = ac.createBufferSource(), lp = ac.createBiquadFilter(), rg = ac.createGain();
+    roar.buffer = noiseBuf; roar.loop = true; lp.type = 'lowpass'; lp.frequency.value = 240; rg.gain.value = 0.07;
+    roar.connect(lp); lp.connect(rg); rg.connect(g); roar.start();
+    const wind = ac.createBufferSource(), bp = ac.createBiquadFilter(), wg = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+    wind.buffer = noiseBuf; wind.loop = true; bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 0.7; wg.gain.value = 0.014;
+    lfo.frequency.value = 0.08; lg.gain.value = 0.011;
+    lfo.connect(lg); lg.connect(wg.gain); wind.connect(bp); bp.connect(wg); wg.connect(g); wind.start(0, 1); lfo.start();
+    const timer = setInterval(() => {
+      if (!ac || ac.state !== 'running' || document.hidden) return;
+      const n = Math.random() < 0.3 ? 2 : Math.random() < 0.75 ? 1 : 0;
+      for (let i = 0; i < n; i++) hiss(Math.random() * 0.2, 0.012 + Math.random() * 0.03, { type: 'highpass', f: 1400 + Math.random() * 3200, vol: 0.015 + Math.pow(Math.random(), 3) * 0.13, attack: 0.001, dest: g });
+    }, 210);
+    amb = () => {
+      clearInterval(timer);
+      try { g.gain.cancelScheduledValues(ac.currentTime); g.gain.setTargetAtTime(0, ac.currentTime, 0.15); } catch (e) {}
+      setTimeout(() => { try { roar.stop(); wind.stop(); lfo.stop(); g.disconnect(); } catch (e) {} }, 900);
+    };
+  }
+  function setSound(on) {
+    sndOn = !!on;
+    try { localStorage.setItem(SND, sndOn ? '1' : '0'); } catch (e) {}
+    if (!sndOn) { if (amb) { amb(); amb = null; } }
+    else if (wantAmb) ambient(true);
+  }
+  /* Browsers only allow sound after a tap or a key press. */
+  const unlock = () => { unlocked = true; if (audio() && wantAmb && !amb) ambient(true); };
+  ['pointerdown', 'keydown', 'touchend'].forEach(ev => document.addEventListener(ev, unlock, { capture: true, passive: true }));
+  const buzz = pattern => { try { if (sndOn && navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} };
+  const sound = { play, ambient, buzz, on: () => sndOn, set: setSound, toggle: () => { setSound(!sndOn); return sndOn; } };
+
+  window.HTS = { rpc, esc, ord, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, calm, scene, night, mood, sound, now: () => Date.now() + offset };
 })();

@@ -3,6 +3,8 @@
   'use strict';
   const { rpc, esc, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, now } = window.HTS;
   const paintScene = window.HTS.scene || (() => {}), night = window.HTS.night || (() => {});
+  const mood = window.HTS.mood || (() => {});
+  const sound = window.HTS.sound || { play() {}, ambient() {}, on: () => false, toggle: () => false };
   const stage = document.getElementById('stage');
   const ctl = document.getElementById('ctl');
   const where = document.getElementById('where');
@@ -95,7 +97,8 @@
     if (!s) return;
     const p = phase();
     const inGame = p !== 'none' && p !== 'lobby';
-    night(!inGame || p === 'final');
+    night(true);
+    setMood();
     count.textContent = p === 'none' ? '' : s.players + (s.players === 1 ? ' player' : ' players');
     where.textContent = inGame && p !== 'final' ? `${s.q + 1} / ${s.total}` : '';
 
@@ -123,7 +126,7 @@
       lastCount = ''; lastN = -1;
       if (p === 'none') stage.innerHTML = `<div class="view gate"><h1 class="title">Hunt the Sign</h1></div>`;
       else if (p === 'lobby') drawLobby();
-      else if (p === 'reveal') drawReveal();
+      else if (p === 'reveal') { drawReveal(); sound.play('reveal'); }
       else if (p === 'final') drawFinal();
       else drawQuestion();
     }
@@ -153,7 +156,7 @@
     const box = document.getElementById('names');
     if (!box) return;
     const n = document.getElementById('n');
-    if (s.board.length !== lastN) { lastN = s.board.length; n.textContent = lastN; pop(n); }
+    if (s.board.length !== lastN) { if (lastN >= 0 && s.board.length > lastN) { sound.play('join'); if (window.HTS_SKY) window.HTS_SKY.burst(0.7); } lastN = s.board.length; n.textContent = lastN; pop(n); }
     const have = new Map([...box.children].map(b => [b.dataset.id, b]));
     for (const pl of s.board.slice().sort((a, b) => a.name.localeCompare(b.name))) {
       if (have.has(pl.id)) { have.delete(pl.id); continue; }
@@ -222,6 +225,7 @@
       els.set(pl.id, el);
     });
     later(() => {
+      sound.play('board');
       const t0 = performance.now(), dur = 800;
       after.forEach((pl, i) => {
         const el = els.get(pl.id);
@@ -257,6 +261,7 @@
       </div></div>`;
     [[3, 600], [2, 1900], [1, 3400]].forEach(([n, ms]) => later(() => {
       const el = stage.querySelector('.step.p' + n); if (el) el.classList.add('show');
+      sound.play(n === 1 ? 'fanfare' : 'step');
       if (n === 1) { confetti(stage, 140); const side = stage.querySelector('.side'); if (side) side.classList.add('show'); }
     }, ms));
   }
@@ -271,7 +276,7 @@
       : p === 'open' ? 'end question' : p === 'final' ? 'game over' : last ? 'podium' : 'next question';
     const inQ = p === 'ready' || p === 'open';
     const canSkip = (p === 'lobby' || p === 'reveal' || p === 'closed') && s.q + 2 < s.total;
-    const k = [p, s.q, s.secs, armed, busy, fails > 1, label].join('|');
+    const k = [p, s.q, s.secs, armed, busy, fails > 1, label, sound.on()].join('|');
     if (k === ctlKey) return;
     ctlKey = k;
     ctl.innerHTML = `<button class="btn primary" data-a="go" ${busy || p === 'ready' || p === 'final' ? 'disabled' : ''}>${label}</button>
@@ -280,6 +285,7 @@
       ${canSkip ? `<span class="sep"></span><button class="btn small" data-a="skip">skip next</button>` : ''}
       <span class="gap"></span>
       ${fails > 1 ? '<span class="msg">reconnecting</span>' : ''}
+      <button class="btn small" data-a="snd" title="M">${sound.on() ? 'sound on' : 'sound off'}</button>
       <button class="btn small" data-a="full">full screen</button>
       ${p !== 'none' && p !== 'final' && p !== 'lobby' ? `<button class="btn small warn" data-a="end">${armed === 'end' ? 'press again' : 'end game'}</button>` : ''}
       ${p !== 'none' ? `<button class="btn small warn" data-a="new">${armed === 'new' ? 'press again' : 'new game'}</button>` : ''}`;
@@ -304,6 +310,7 @@
     else if (a === 'kick') act('hts_host_kick', { p_player: b.dataset.id });
     else if (a === 'end') { if (arm('end')) act('hts_host_end'); }
     else if (a === 'new') { if (arm('new')) act('hts_host_new'); }
+    else if (a === 'snd') { sound.toggle(); drawCtl(); }
     else if (a === 'full') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); }
     if (b.blur) b.blur();
   });
@@ -314,12 +321,25 @@
     if ([' ', 'Enter', 'ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); go(); }
     else if (e.key === '+' || e.key === '=') { if (phase() === 'open' || phase() === 'ready') act('hts_host_time', { p_delta: 10 }); }
     else if (e.key === 'f' || e.key === 'F') { const b = ctl.querySelector('[data-a="full"]'); if (b) b.click(); }
+    else if (e.key === 'm' || e.key === 'M') { sound.toggle(); drawCtl(); }
   });
 
+  /* The valley follows the game: closer for a question, a flare in the last five seconds. */
+  function setMood() {
+    if (!s) return;
+    const p = phase();
+    const m = p === 'none' || p === 'lobby' ? 'lobby' : p === 'ready' ? 'ready' : p === 'reveal' ? 'reveal' : p === 'final' ? 'final'
+      : p === 'open' && s.closes_at - now() <= 5000 ? 'low' : 'open';
+    mood(m, typeof s.q === 'number' ? s.q : 0);
+  }
+
   /* The clock, ten times a second. */
+  let lastP = '';
   function tick() {
     if (!s) return;
     const p = phase();
+    if (p !== lastP) { if (p === 'open' && lastP === 'ready') sound.play('go'); lastP = p; }
+    if (p === 'open') setMood();
     if ((p === 'open' || p === 'closed') && ctlKey.split('|')[0] !== p) drawCtl();
     const secs = document.getElementById('secs');
     if (!secs) return;
@@ -329,18 +349,21 @@
     if (n !== lastCount) {
       lastCount = n; secs.textContent = n;
       if (p === 'ready' || (left <= 5000 && left > 0)) pop(secs);
+      if (p === 'ready') sound.play('tick'); else if (p === 'open' && left <= 5000 && left > 0) sound.play('low');
     }
     secs.classList.toggle('soon', p === 'ready');
     secs.classList.toggle('low', p !== 'ready' && left <= 5000);
     bar.classList.toggle('low', p !== 'ready' && left <= 5000);
     bar.firstElementChild.style.transform = `scaleX(${p === 'ready' ? 1 : Math.min(1, left / span)})`;
     opts.classList.toggle('hold', p === 'ready');
+    if (stage.firstElementChild) stage.firstElementChild.classList.toggle('is-ready', p === 'ready');
     /* One square for each player, filled in as the answers arrive. */
     if (pips.children.length !== s.players) pips.innerHTML = '<i></i>'.repeat(s.players);
     for (let i = 0; i < pips.children.length; i++) pips.children[i].classList.toggle('on', i < s.answered);
   }
   setInterval(tick, 100);
 
+  sound.ambient(true);
   paintScene({ moon: [1480, 170, 40], shoot: [1130, 70] });
   poll();
 })();
