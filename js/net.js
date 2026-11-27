@@ -62,12 +62,15 @@
     return 'closed';
   }
 
-  /* The line from the book that backs the answer. */
+  /* Why the answer is the answer: a short line, then the line from the book that backs it. */
   function evidence(rv) {
-    if (!rv || !rv.ev) return '';
+    if (!rv || (!rv.ev && !rv.why)) return '';
     const ev = rv.ev;
+    const why = rv.why ? `<p class="why">${esc(rv.why)}</p>` : '';
+    const lead = rv.lead && ev ? `<p class="lead">${esc(rv.lead)}</p>` : '';
+    if (!ev) return `<div class="evidence">${why}</div>`;
     const q = ev.fact ? esc(ev.q) : '\u201C' + esc(ev.q) + '\u201D';
-    return `<div class="evidence"><p class="quote">${q} <span class="cite">(${esc(ev.cite)})</span></p>${ev.fact || !ev.who ? '' : `<p class="who">${esc(ev.who)}</p>`}</div>`;
+    return `<div class="evidence">${why}${lead}<p class="quote">${q} <span class="cite">(${esc(ev.cite)})</span></p>${ev.fact || !ev.who ? '' : `<p class="who">${esc(ev.who)}</p>`}</div>`;
   }
 
   const MODES = { double: 'double points', lightning: 'lightning' };
@@ -165,7 +168,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     const go = () => {
       const tag = document.createElement('script');
-      tag.src = 'js/sky.js?v=4';
+      tag.src = 'js/sky.js?v=5';
       tag.async = true;
       document.head.appendChild(tag);
     };

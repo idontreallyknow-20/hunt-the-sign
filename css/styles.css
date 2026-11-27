@@ -140,7 +140,8 @@ h1, h2, p { margin: 0; }
 .join input:focus { outline: none; border-color: var(--lamp); }
 .join .btn { width: 100%; margin-top: 12px; font-size: 18px; padding: 14px; }
 .err { color: var(--no); margin-top: 12px; min-height: 1.5em; text-shadow: var(--shade); }
-.credits { position: absolute; left: 16px; bottom: 16px; font-size: 12px; color: var(--muted); }
+.credits { position: absolute; left: 16px; bottom: 16px; font-size: 12px; color: var(--muted); text-decoration: underline; padding: 6px 0; }
+.credits.hostlink { left: auto; right: 16px; }
 
 .big { font-family: var(--serif); font-size: 36px; line-height: 1.2; font-weight: 500; text-shadow: var(--shade); }
 .dots { display: flex; gap: 8px; margin-top: 20px; }
@@ -196,6 +197,14 @@ h1, h2, p { margin: 0; }
 .place { font-family: var(--serif); font-size: 128px; font-weight: 600; line-height: 1; text-shadow: 0 4px 40px rgba(0, 0, 0, 0.75); }
 .tier { font-family: var(--serif); font-style: italic; font-size: 38px; color: var(--lamp); text-shadow: var(--shade); animation: rise 500ms var(--ease) 350ms both; }
 .fin .pts { font-size: 20px; color: var(--ink); }
+/* the short explanation, to read while the host moves on */
+.res .evidence { margin-top: 18px; border: 1px solid var(--line); background: var(--glass-2); padding: 12px 14px; animation: rise 450ms var(--ease) 800ms both; }
+.res .evidence .why { font-family: var(--serif); font-size: 17px; line-height: 1.3; }
+.res .evidence .lead { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.res .evidence .quote { font-size: 15px; line-height: 1.3; color: var(--muted); margin-top: 8px; }
+.res .evidence .lead + .quote { margin-top: 2px; }
+.res .evidence .who { font-size: 12px; color: var(--muted); }
+.res:has(.evidence) { padding-bottom: 3vh; }
 
 .page { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: 24px 16px; }
 .page p { margin-top: 12px; font-size: 14px; }
@@ -235,8 +244,8 @@ h1, h2, p { margin: 0; }
 .names button:hover { border-color: var(--no); color: var(--no); text-decoration: line-through; }
 
 /* question */
-.q { display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 29vw, 560px); gap: 3vw; }
-.q.solo { grid-template-columns: minmax(0, 1fr); }
+.q { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr); gap: 2.5vw; }
+.q.solo:not(.live) { grid-template-columns: minmax(0, 1fr); }
 .q .left { display: flex; flex-direction: column; min-height: 0; }
 .banner { align-self: flex-start; background: var(--lamp); color: var(--lamp-ink); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(16px, 1.7vw, 36px); line-height: 1.3; padding: 0.4vh 1vw; margin-bottom: 1.6vh; animation: stamp 520ms var(--ease) both; transform-origin: left center; }
 .q.revealed .banner { font-size: clamp(13px, 1.1vw, 22px); animation: none; }
@@ -252,6 +261,10 @@ h1, h2, p { margin: 0; }
 .hopts.three { grid-template-columns: 1fr; }
 .q.solo .hopts { flex: 1; grid-auto-rows: 1fr; max-height: 44vh; }
 .q.solo .hopt { font-size: clamp(22px, 2.5vw, 52px); padding: 1.6vh 1.6vw; }
+/* with the leaderboard beside it, the question takes less room: phones show it too */
+.q.live .prompt { font-size: clamp(22px, 2.5vw, 52px); margin: 1.2vh 0 2vh; }
+.q.live .hopts { max-height: 38vh; }
+.q.live .hopt { font-size: clamp(17px, 1.75vw, 36px); padding: 1.2vh 1vw; min-height: 0; }
 .hopt { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.2vw; border: 2px solid var(--edge); background: var(--glass-2); padding: 1.6vh 1.2vw; font-family: var(--serif); font-size: clamp(20px, 2.1vw, 44px); line-height: 1.2; min-height: 9vh; overflow: hidden; transition: opacity 300ms var(--ease), background-color 300ms var(--ease), border-color 300ms var(--ease); }
 .hopt > * { position: relative; }
 .hopt .k { display: grid; place-items: center; width: 1.9em; height: 1.9em; background: var(--lamp); color: var(--lamp-ink); font-family: var(--mono); font-size: 0.6em; font-weight: 600; }
@@ -270,7 +283,9 @@ h1, h2, p { margin: 0; }
 .pips i.on { background: var(--lamp); border-color: var(--lamp); animation: pop 260ms var(--spring) both; transform-origin: center; }
 
 .q .evidence { margin-top: 2.4vh; border-top: 1px solid var(--line); padding-top: 1.8vh; animation: in 500ms var(--ease) 900ms both; text-shadow: 0 2px 22px rgba(0, 0, 0, 0.85); }
-.q .evidence .quote { font-size: clamp(22px, 2.4vw, 50px); line-height: 1.2; }
+.q .evidence .why { font-family: var(--serif); font-size: clamp(20px, 2vw, 42px); line-height: 1.22; margin-bottom: 1.6vh; }
+.q .evidence .lead { color: var(--muted); margin-bottom: 0.4vh; }
+.q .evidence .quote { font-size: clamp(20px, 2.1vw, 44px); line-height: 1.2; color: var(--muted); }
 .q .evidence .who { color: var(--muted); margin-top: 0.8vh; }
 
 /* leaderboard */
@@ -293,6 +308,11 @@ h1, h2, p { margin: 0; }
 .row.first .chip { background: var(--lamp-ink); color: var(--lamp); border-color: var(--lamp-ink); }
 .row.first .chip.line { background: none; color: var(--lamp-ink); }
 .row.out { opacity: 0; }
+.board .rows .row { font-size: clamp(17px, 1.8vw, 38px); }
+.q.live .row .mv::after { content: ""; display: inline-block; width: 0.9em; height: 0.9em; border: 2px solid var(--line); vertical-align: middle; transition: background-color 200ms var(--ease), border-color 200ms var(--ease); }
+.q.live .row.in .mv::after { background: var(--lamp); border-color: var(--lamp); }
+.q.live .row.first .mv::after { border-color: rgba(26, 18, 6, 0.4); }
+.q.live .row.first.in .mv::after { background: var(--lamp-ink); border-color: var(--lamp-ink); }
 
 /* final */
 .final { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 3vw; }
@@ -321,7 +341,10 @@ h1, h2, p { margin: 0; }
 
 .gate { max-width: 60ch; }
 .gate .title { font-size: clamp(56px, 7vw, 130px); }
-.gate p { margin-top: 12px; }
+.gate p { margin-top: 12px; text-shadow: var(--shade); }
+.gate form { display: flex; gap: 10px; margin-top: 12px; max-width: 420px; }
+.gate input { flex: 1; min-width: 0; border: 2px solid var(--edge); background: var(--glass-2); color: var(--ink); padding: 12px 14px; font-size: 18px; }
+.gate input:focus { outline: none; border-color: var(--lamp); }
 
 @media (max-height: 640px) {
   .title { font-size: 42px; }

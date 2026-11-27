@@ -5,6 +5,7 @@
   /* A phone can hold an older copy of the shared script for a few minutes after an update. */
   const paintScene = window.HTS.scene || (() => {}), night = window.HTS.night || (() => {});
   const mood = window.HTS.mood || (() => {});
+  const evidence = window.HTS.evidence || (() => '');
   const sound = window.HTS.sound || { play() {}, buzz() {}, on: () => false, toggle: () => false };
   const main = document.getElementById('main');
   const who = document.getElementById('who');
@@ -23,6 +24,7 @@
   let fails = 0;
   let pollTimer = 0;
   let joining = false;
+  let hosting = false;     // the host password box is up instead of the name box
   let lastCount = '';
 
   try {
@@ -139,9 +141,18 @@
     who.textContent = session ? session.name : '';
     let key, html, tone = '', locked = false;
     if (!session) {
-      key = 'join|' + notice + '|' + joining;
+      key = 'join|' + notice + '|' + joining + '|' + hosting;
       if (key === viewKey && !force) return;
-      html = `<div class="screen join">
+      if (hosting) html = `<div class="screen join">
+        <h1 class="title">Host</h1>
+        <form id="hf" autocomplete="off">
+          <input id="hk" type="password" placeholder="host password" aria-label="host password" autocomplete="off" enterkeyhint="go" required>
+          <button class="btn primary">open the host screen</button>
+        </form>
+        <p class="err"></p>
+        <button type="button" class="credits" data-host="0">back</button>
+      </div>`;
+      else html = `<div class="screen join">
         <h1 class="title">Hunt the Sign</h1>
         <form id="jf" autocomplete="off">
           <input id="nm" maxlength="14" placeholder="your name" aria-label="your name" autocapitalize="words" enterkeyhint="go" value="${esc(lastName)}" required>
@@ -149,6 +160,7 @@
         </form>
         <p class="err" role="alert">${esc(notice)}</p>
         <a class="credits" href="credits.html">credits</a>
+        <button type="button" class="credits hostlink" data-host="1">host</button>
       </div>`;
     } else if (!s || p === 'none') {
       key = 'none';
@@ -209,7 +221,8 @@
         ${tone === 'no' ? truth : `<p class="gain" id="gain" data-to="${m.gain || 0}">+0</p>`}
         ${!poll && m.streak >= 2 ? `<p class="streak"><span class="chip">streak of ${m.streak}</span></p>` : ''}
         <p class="rank">${ord(m.rank || 1)}${moved > 0 ? ` <span class="up">▲ ${moved}</span>` : moved < 0 ? ` <span class="down">▼ ${-moved}</span>` : ''}</p>
-        <p class="pts">${fmt(m.score)}</p></div>`;
+        <p class="pts">${fmt(m.score)}</p>
+        ${evidence(rv)}</div>`;
     } else if (p === 'final') {
       const m = me();
       key = 'final';
@@ -297,10 +310,20 @@
     const b = e.target.closest('.opt[data-i]');
     if (b && !b.disabled) return answer(Number(b.dataset.i));
     const w = e.target.closest('.pw[data-p]');
-    if (w && !w.disabled) usePower(w.dataset.p);
+    if (w && !w.disabled) return usePower(w.dataset.p);
+    const h = e.target.closest('[data-host]');
+    if (h) {
+      hosting = h.dataset.host === '1';
+      draw(true);
+      const box = document.getElementById(hosting ? 'hk' : 'nm');
+      if (box) box.focus();
+    }
   });
   main.addEventListener('submit', e => {
     e.preventDefault();
+    /* the host password goes to the host page, which checks it with the server */
+    const hk = document.getElementById('hk');
+    if (hk) { if (hk.value) location.href = 'host.html#k=' + encodeURIComponent(hk.value); return; }
     const v = (document.getElementById('nm').value || '').trim();
     if (v) { lastName = v; join(v); }
   });

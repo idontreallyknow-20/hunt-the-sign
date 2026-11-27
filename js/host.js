@@ -32,6 +32,7 @@
   let s = null, viewKey = '', ctlKey = '', busy = false, fails = 0, denied = false;
   let armed = '', armedTimer = 0, lastGo = 0, pollTimer = 0, timers = [];
   let lastCount = '', lastLead = '', lastN = -1;
+  let liveRows = null;                  // leaderboard rows on a question screen, by player id
   const later = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
   const clearLater = () => { timers.forEach(clearTimeout); timers = []; };
   const pop = el => { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); };
@@ -87,10 +88,16 @@
 
   function draw() {
     if (!key || denied) {
-      if (viewKey !== 'gate') {
-        viewKey = 'gate';
-        stage.innerHTML = `<div class="view gate"><h1 class="title">Hunt the Sign</h1><p>${denied ? 'That host link is not right.' : 'Open this page with the host link.'}</p></div>`;
+      const gk = 'gate|' + denied;
+      if (viewKey !== gk) {
+        viewKey = gk;
+        stage.innerHTML = `<div class="view gate"><h1 class="title">Hunt the Sign</h1>
+          <p>${denied ? 'That password is not right.' : 'Host password'}</p>
+          <form id="gf" autocomplete="off"><input id="gk" type="password" aria-label="host password" autocomplete="off"><button class="btn primary">open</button></form></div>`;
         ctl.innerHTML = '';
+        ctlKey = '';
+        const box = document.getElementById('gk');
+        if (box) box.focus();
       }
       return;
     }
@@ -123,7 +130,7 @@
     if (k !== viewKey) {
       viewKey = k;
       clearLater();
-      lastCount = ''; lastN = -1;
+      lastCount = ''; lastN = -1; liveRows = null;
       if (p === 'none') stage.innerHTML = `<div class="view gate"><h1 class="title">Hunt the Sign</h1></div>`;
       else if (p === 'lobby') drawLobby();
       else if (p === 'reveal') { drawReveal(); sound.play('reveal'); }
@@ -174,12 +181,14 @@
 
   function drawQuestion() {
     const q = s.question;
-    stage.innerHTML = `<div class="view q solo"><div class="left">
+    stage.innerHTML = `<div class="view q solo live"><div class="left">
       ${banner(q)}
       <div class="timer"><span class="secs" id="secs"></span><div class="bar" id="bar"><i></i></div></div>
       <h1 class="prompt serif">${esc(q.prompt)}</h1>
       ${optsHtml(q, 'hold stag')}
-      <div class="pips" id="pips"></div></div></div>`;
+      <div class="pips" id="pips"></div></div>
+      <aside class="board"><div class="rows" id="rows"></div></aside></div>`;
+    drawBoard(true);
   }
 
   function drawReveal() {
@@ -200,9 +209,10 @@
     drawBoard();
   }
 
-  /* The leaderboard. Rows start in the order from before this question, then slide to
-     the new order while the scores count up. */
-  function drawBoard() {
+  /* The leaderboard. It stays up through every question in the order from before that
+     question, with a mark beside each player whose answer is in. On the reveal the rows
+     slide to the new order while the scores count up. */
+  function drawBoard(live) {
     const rows = document.getElementById('rows');
     const h = Math.max(36, Math.floor(rows.clientHeight / SHOWN));
     const before = s.board.slice().sort((a, b) => b.prev - a.prev || a.name.localeCompare(b.name));
@@ -218,12 +228,17 @@
       const el = document.createElement('div');
       el.className = 'row';
       el.style.height = h + 'px';
-      const chips = (used[pl.id] ? `<i class="chip">${POWERS[used[pl.id]]}</i>` : '') + (pl.streak >= 3 ? `<i class="chip line">${pl.streak} in a row</i>` : '');
+      const chips = live ? '' : (used[pl.id] ? `<i class="chip">${POWERS[used[pl.id]]}</i>` : '') + (pl.streak >= 3 ? `<i class="chip line">${pl.streak} in a row</i>` : '');
       el.innerHTML = `<span class="r">${rankIn(before, 'prev', pl)}</span><span class="nm"><span>${esc(pl.name)}</span>${chips}</span><span class="mv"></span><span class="sc"><span class="v">${fmt(pl.prev)}</span><span class="gn"></span></span>`;
       place(el, i);
       rows.appendChild(el);
       els.set(pl.id, el);
     });
+    if (live) {
+      if (before[0] && before[0].prev > 0 && (!before[1] || before[0].prev > before[1].prev)) els.get(before[0].id).classList.add('first');
+      liveRows = els;
+      return;
+    }
     later(() => {
       sound.play('board');
       const t0 = performance.now(), dur = 800;
@@ -315,9 +330,22 @@
     if (b.blur) b.blur();
   });
 
+  /* The password box on the gate screen. */
+  document.addEventListener('submit', e => {
+    if (!e.target || e.target.id !== 'gf') return;
+    e.preventDefault();
+    const v = document.getElementById('gk').value;
+    if (!v) return;
+    key = v; denied = false; viewKey = '';
+    try { localStorage.setItem(KEY, v); } catch (err) {}
+    stage.innerHTML = '';
+    poll();
+  });
+
   /* Space, Enter, right arrow or Page Down (a slide clicker) all press the main button. */
   document.addEventListener('keydown', e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
     if ([' ', 'Enter', 'ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); go(); }
     else if (e.key === '+' || e.key === '=') { if (phase() === 'open' || phase() === 'ready') act('hts_host_time', { p_delta: 10 }); }
     else if (e.key === 'f' || e.key === 'F') { const b = ctl.querySelector('[data-a="full"]'); if (b) b.click(); }
@@ -360,6 +388,7 @@
     /* One square for each player, filled in as the answers arrive. */
     if (pips.children.length !== s.players) pips.innerHTML = '<i></i>'.repeat(s.players);
     for (let i = 0; i < pips.children.length; i++) pips.children[i].classList.toggle('on', i < s.answered);
+    if (liveRows) for (const pl of s.board) { const el = liveRows.get(pl.id); if (el) el.classList.toggle('in', !!pl.answered && p !== 'ready'); }
   }
   setInterval(tick, 100);
 
