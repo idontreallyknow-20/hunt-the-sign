@@ -80,6 +80,7 @@
   /* Square confetti, falling from the top of a box. */
   function confetti(box, n) {
     if (calm || !box || !box.animate) return;
+    if (lite) n = Math.ceil(n * 0.4);
     const layer = document.createElement('div');
     layer.className = 'confetti';
     const colours = ['#f1eadb', '#f0aa4f', '#86dba0', '#c9822b', '#f1eadb'];
@@ -98,6 +99,18 @@
     box.appendChild(layer);
     setTimeout(() => layer.remove(), 6200);
   }
+
+  /* Phones, small windows and weak computers get the cheap version of everything: the 3D
+     valley as a still picture that only moves when the game changes state, a flat scene
+     that does not animate, and less confetti. ?lite=1 or ?lite=0 in the address forces it. */
+  const lite = (() => {
+    const asked = (location.search.match(/[?&]lite=([01])\b/) || [])[1];
+    if (asked) return asked === '1';
+    const mq = q => !!(window.matchMedia && window.matchMedia(q).matches);
+    const weak = (navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+    return mq('(pointer: coarse)') || Math.min(window.innerWidth, window.innerHeight) < 600 || !!weak;
+  })();
+  if (lite) document.documentElement.classList.add('lite');
 
   /* The flat night scene: stars, a moon, three ridges, spruce, a trail of signs and a small
      fire. It goes up first, and stays if the 3D valley (js/sky.js) cannot run on this device. */
@@ -152,7 +165,7 @@
         <path class="fl f3" d="M-5 0Q-7 -10 0 -21Q7 -10 5 0Z" fill="#ffe9b0"/>
         <rect x="-25" y="-3" width="50" height="6" fill="#070b09" transform="rotate(11)"/><rect x="-25" y="-3" width="50" height="6" fill="#070b09" transform="rotate(-11)"/>
         ${embers}
-      </g></svg><i class="veil"></i><i class="wash"></i>`;
+      </g></svg><i class="lamp"></i><i class="veil"></i><i class="wash"></i>`;
     document.body.insertBefore(el, document.body.firstChild);
     loadSky();
   }
@@ -165,15 +178,23 @@
      ?sky=off in the address turns it off. */
   function loadSky() {
     if (/[?&]sky=off\b/.test(location.search)) return;
-    if (navigator.connection && navigator.connection.saveData) return;
+    const force = /[?&]sky=force\b/.test(location.search);
+    if (!force && navigator.connection && navigator.connection.saveData) return;
+    /* the very weakest devices keep the flat drawing and never fetch the 3D file */
+    if (!force && ((navigator.deviceMemory && navigator.deviceMemory <= 2) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2))) return;
     const go = () => {
       const tag = document.createElement('script');
-      tag.src = 'js/sky.js?v=5';
+      tag.src = 'js/sky.js?v=7';
       tag.async = true;
       document.head.appendChild(tag);
     };
-    if (document.readyState === 'complete') setTimeout(go, 60);
-    else window.addEventListener('load', () => setTimeout(go, 60));
+    /* phones and weak computers wait for a quiet moment, so typing a name never stutters */
+    const soon = () => {
+      if (lite && window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 2500 });
+      else setTimeout(go, lite ? 900 : 60);
+    };
+    if (document.readyState === 'complete') soon();
+    else window.addEventListener('load', soon);
   }
 
   /* What the valley should feel like right now: 'lobby', 'ready', 'open', 'low', 'locked',
@@ -257,5 +278,5 @@
   const buzz = pattern => { try { if (sndOn && navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} };
   const sound = { play, ambient, buzz, on: () => sndOn, set: setSound, toggle: () => { setSound(!sndOn); return sndOn; } };
 
-  window.HTS = { rpc, esc, ord, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, calm, scene, night, mood, sound, now: () => Date.now() + offset };
+  window.HTS = { rpc, esc, ord, fmt, LETTERS, MODES, POWERS, phaseNow, evidence, confetti, calm, lite, scene, night, mood, sound, now: () => Date.now() + offset };
 })();
